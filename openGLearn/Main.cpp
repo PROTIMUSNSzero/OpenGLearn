@@ -242,9 +242,11 @@ int drawNothin(GLFWwindow* window)
 int drawTriangleOrRetangle(GLFWwindow *window)
 {
 #ifdef DRAW_TRIANGLE
-	CustomShader myShader("ShaderSource/Triangle.vs", "ShaderSource/Triangle.fs");
+	CustomShader myShader("../openGLearn/ShaderSource/Triangle.vs",
+	        "../openGLearn/ShaderSource/Triangle.fs");
 #else
-	CustomShader myShader("ShaderSource/Rectangle.vs", "ShaderSource/Rectangle.fs");
+	CustomShader myShader("../openGLearn/ShaderSource/Rectangle.vs",
+	        "../openGLearn/ShaderSource/Rectangle.fs");
 #endif
 
 
@@ -389,7 +391,8 @@ int drawTriangleOrRetangle(GLFWwindow *window)
 //绘制纹理,基础变换
 int drawWithTextureAndTransform(GLFWwindow* window)
 {
-	CustomShader myShader("ShaderSource/Texture.vs", "ShaderSource/Texture.fs");
+	CustomShader myShader("../openGLearn/ShaderSource/Texture.vs",
+	        "../openGLearn/ShaderSource/Texture.fs");
 
 	float vertices[] =
 	{
@@ -444,7 +447,8 @@ int drawWithTextureAndTransform(GLFWwindow* window)
 	int width, height, nrChannels;
 	//翻转纹理的y轴，即上下颠倒（需在加载图像前调用）
 	stbi_set_flip_vertically_on_load(true);
-	unsigned char* data = stbi_load("Res/Texture/container.jpg", &width, &height, &nrChannels, 0);
+	unsigned char* data = stbi_load("../openGLearn/Res/Texture/container.jpg",
+	        &width, &height,&nrChannels, 0);
 	if (data)
 	{
 		//生成纹理（需纹理对象和加载的纹理数据）；
@@ -467,7 +471,8 @@ int drawWithTextureAndTransform(GLFWwindow* window)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	data = stbi_load("Res/Texture/awesomeface.png", &width, &height, &nrChannels, 0);
+	data = stbi_load("../openGLearn/Res/Texture/awesomeface.png", &width, &height,
+	        &nrChannels,0);
 	if (data)
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
@@ -538,7 +543,8 @@ int drawInCoordSystem(GLFWwindow* window)
 	//开启深度测试
 	glEnable(GL_DEPTH_TEST);
 
-	CustomShader myShader("ShaderSource/CoordSystem.vs", "ShaderSource/CoordSystem.fs");
+	CustomShader myShader("../openGLearn/ShaderSource/CoordSystem.vs",
+	        "../openGLearn/ShaderSource/CoordSystem.fs");
 
 	//立方体顶点
 	float vertices[] =
@@ -623,7 +629,8 @@ int drawInCoordSystem(GLFWwindow* window)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	int width, height, nrChannels;
-	unsigned char* data = stbi_load("Res/Texture/container.jpg", &width, &height, &nrChannels, 0);
+	unsigned char* data = stbi_load("../openGLearn/Res/Texture/container.jpg",
+	        &width,&height,&nrChannels, 0);
 	if (data)
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -665,7 +672,8 @@ int drawInCoordSystem(GLFWwindow* window)
 #else
 		//创建透视矩阵，使用透视投影
 		//第1参数:FOV角度；第2参数：宽高比；第3、4参数：近、远平面距离；
-		projection = perspective(radians(camera.Zoom), (float)SCR_WindowWidth / SCR_WindowHeight, 
+		projection = perspective(radians(camera.Zoom),
+		        (float)SCR_WindowWidth / SCR_WindowHeight,
 			0.1f, 100.0f);
 #endif
 		myShader.setMat4("projection", projection);
@@ -704,15 +712,21 @@ int drawColor(GLFWwindow* window)
 	glEnable(GL_DEPTH_TEST);
 
 #ifdef DRAW_LIGHTING
-	CustomShader cubeShader("ShaderSource/Lighting.vs", "ShaderSource/Lighting.fs");
-	CustomShader lightShader("ShaderSource/Color.vs", "ShaderSource/LightColor.fs");
+	CustomShader cubeShader("../openGLearn/ShaderSource/Lighting.vs",
+	        "../openGLearn/ShaderSource/Lighting.fs");
+	CustomShader lightShader("../openGLearn/ShaderSource/Color.vs",
+	        "../openGLearn/ShaderSource/LightColor.fs");
 #else
 #ifdef DRAW_LIGHT_MAPS
-	CustomShader cubeShader("ShaderSource/LightMaps.vs", "ShaderSource/LightMaps.fs");
-	CustomShader lightShader("ShaderSource/Color.vs", "ShaderSource/LightColor.fs");
+	CustomShader cubeShader("../openGLearn/ShaderSource/LightMaps.vs",
+	        "../openGLearn/ShaderSource/LightMaps.fs");
+	CustomShader lightShader("../openGLearn/ShaderSource/Color.vs",
+	        "../openGLearn/ShaderSource/LightColor.fs");
 #else
-	CustomShader cubeShader("ShaderSource/Color.vs", "ShaderSource/Color.fs");
-	CustomShader lightShader("ShaderSource/Color.vs", "ShaderSource/LightColor.fs");
+	CustomShader cubeShader("../openGLearn/ShaderSource/Color.vs",
+	        "../openGLearn/ShaderSource/Color.fs");
+	CustomShader lightShader("../openGLearn/ShaderSource/Color.vs",
+	        "../openGLearn/ShaderSource/LightColor.fs");
 #endif
 #endif
 
@@ -780,8 +794,8 @@ int drawColor(GLFWwindow* window)
 	glEnableVertexAttribArray(2);
 
 #ifdef DRAW_LIGHT_MAPS
-	unsigned int diffuseMap = loadTexture("Res/Texture/Container2.png");
-	unsigned int specularMap = loadTexture("Res/Texture/Container2_specular.png");
+	unsigned int diffuseMap = loadTexture("../openGLearn/Res/Texture/Container2.png");
+	unsigned int specularMap = loadTexture("../openGLearn/Res/Texture/Container2_specular.png");
 
 	cubeShader.use();
 	cubeShader.setInt("material.diffuse", 0);
@@ -839,7 +853,8 @@ int drawColor(GLFWwindow* window)
 		cubeShader.setMat4("view", view);
 
 		mat4 projection = mat4(1.0f);
-		projection = perspective(radians(camera.Zoom), (float)SCR_WindowWidth / SCR_WindowHeight,
+		projection = perspective(radians(camera.Zoom),
+		        (float)SCR_WindowWidth / SCR_WindowHeight,
 			0.1f, 100.0f);
 		cubeShader.setMat4("projection", projection);
 
@@ -893,16 +908,20 @@ int drawMultiLights(GLFWwindow* window)
 	glEnable(GL_DEPTH_TEST);
 
 #ifdef DRAW_MULTILIGHTS
-	CustomShader cubeShader("ShaderSource/LightMaps.vs", "ShaderSource/Multilights.fs");
+	CustomShader cubeShader("../openGLearn/ShaderSource/LightMaps.vs",
+	        "../openGLearn/ShaderSource/Multilights.fs");
 #else
 #ifdef DRAW_DIRECTIONAL_LIGHT
-	CustomShader cubeShader("ShaderSource/LightMaps.vs", "ShaderSource/DirectionalLight.fs");
+	CustomShader cubeShader("../openGLearn/ShaderSource/LightMaps.vs",
+	        "../openGLearn/ShaderSource/DirectionalLight.fs");
 #else
 #ifdef DRAW_POINT_LIGHT
-	CustomShader cubeShader("ShaderSource/LightMaps.vs", "ShaderSource/PointLight.fs");
+	CustomShader cubeShader("../openGLearn/ShaderSource/LightMaps.vs",
+	        "../openGLearn/ShaderSource/PointLight.fs");
 #else
 #ifdef DRAW_SPOTLIGHT
-	CustomShader cubeShader("ShaderSource/LightMaps.vs", "ShaderSource/Spotlight.fs");
+	CustomShader cubeShader("../openGLearn/ShaderSource/LightMaps.vs",
+	        "../openGLearn/ShaderSource/Spotlight.fs");
 #endif
 #endif
 #endif 
@@ -995,8 +1014,8 @@ int drawMultiLights(GLFWwindow* window)
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
-	unsigned int diffuseMap = loadTexture("Res/Texture/Container2.png");
-	unsigned int specularMap = loadTexture("Res/Texture/Container2_specular.png");
+	unsigned int diffuseMap = loadTexture("../openGLearn/Res/Texture/Container2.png");
+	unsigned int specularMap = loadTexture("../openGLearn/Res/Texture/Container2_specular.png");
 
 	cubeShader.use();
 	cubeShader.setInt("material.diffuse", 0);
@@ -1097,7 +1116,8 @@ int drawMultiLights(GLFWwindow* window)
 		cubeShader.setMat4("view", view);
 
 		mat4 projection = mat4(1.0f);
-		projection = perspective(radians(camera.Zoom), (float)SCR_WindowWidth / SCR_WindowHeight,
+		projection = perspective(radians(camera.Zoom),
+		        (float)SCR_WindowWidth / SCR_WindowHeight,
 			0.1f, 200.0f);
 		cubeShader.setMat4("projection", projection);
 
@@ -1113,7 +1133,8 @@ int drawMultiLights(GLFWwindow* window)
 		{
 			model = mat4(1.0f);
 			model = translate(model, cubePositions[i]);
-			model = rotate(model, radians(20.0f * (i + 1) * currentFrame), vec3(1.0f, 0.3f, 0.5f));
+			model = rotate(model, radians(20.0f * (i + 1) * currentFrame),
+			        vec3(1.0f, 0.3f, 0.5f));
 			cubeShader.setMat4("model", model);
 
 			glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -1151,9 +1172,10 @@ int drawModel(GLFWwindow* window)
 	//设置深度掩码以禁用深度缓冲的写入
 	//glDepthMask(GL_FALSE);
 
-	CustomShader myShader("ShaderSource/Model.vs", "ShaderSource/Model.fs");
+	CustomShader myShader("../openGLearn/ShaderSource/Model.vs",
+	        "../openGLearn/ShaderSource/Model.fs");
 
-	Model myModel("Res/Model/nanosuit/nanosuit.obj");
+	Model myModel("../openGLearn/Res/Model/nanosuit/nanosuit.obj");
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -1199,8 +1221,10 @@ int drawWithStencilTest(GLFWwindow* window)
 	//GL_ZERO：模板值改为0；
 	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-	CustomShader cubeShader("ShaderSource/StencilTest.vs", "ShaderSource/StencilTest.fs");
-	CustomShader singleColorShader("ShaderSource/Model.vs", "ShaderSource/StencilSingleColor.fs");
+	CustomShader cubeShader("../openGLearn/ShaderSource/StencilTest.vs",
+	        "../openGLearn/ShaderSource/StencilTest.fs");
+	CustomShader singleColorShader("../openGLearn/ShaderSource/Model.vs",
+	        "../openGLearn/ShaderSource/StencilSingleColor.fs");
 
 	float cubeVertices[] =
 	{
@@ -1282,8 +1306,8 @@ int drawWithStencilTest(GLFWwindow* window)
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glBindVertexArray(0);
 
-	unsigned int cubeTexture = loadTexture("Res/Texture/container.jpg");
-	unsigned int floorTexture = loadTexture("Res/Texture/awesomeface.png");
+	unsigned int cubeTexture = loadTexture("../openGLearn/Res/Texture/container.jpg");
+	unsigned int floorTexture = loadTexture("../openGLearn/Res/Texture/awesomeface.png");
 
 	cubeShader.use();
 	cubeShader.setInt("texture1", 0);
@@ -1385,9 +1409,11 @@ int drawWithBlending(GLFWwindow* window)
 	glEnable(GL_BLEND);
 	//设置源颜色和目标颜色因子
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	CustomShader myShader("ShaderSource/CoordSystem.vs", "ShaderSource/CoordSystem.fs");
+	CustomShader myShader("../openGLearn/ShaderSource/CoordSystem.vs",
+	        "../openGLearn/ShaderSource/CoordSystem.fs");
 #else
-	CustomShader myShader("ShaderSource/CoordSystem.vs", "ShaderSource/Grass.fs");
+	CustomShader myShader("../openGLearn/ShaderSource/CoordSystem.vs",
+	        "../openGLearn/ShaderSource/Grass.fs");
 #endif
 
 	float cubeVertices[] = {
@@ -1492,14 +1518,14 @@ int drawWithBlending(GLFWwindow* window)
 	glBindVertexArray(0);
 
 #ifdef DRAW_BLENDING
-	unsigned int cubeTexture = loadTexture("Res/Texture/container2.png");
+	unsigned int cubeTexture = loadTexture("../openGLearn/Res/Texture/container2.png");
 #endif
-	unsigned int floorTexture = loadTexture("Res/Texture/floor.jpg");
+	unsigned int floorTexture = loadTexture("../openGLearn/Res/Texture/floor.jpg");
 
 #ifdef DRAW_BLENDING
-	unsigned int grassTexture = loadTexture("Res/Texture/window.png");
+	unsigned int grassTexture = loadTexture("../openGLearn/Res/Texture/window.png");
 #else
-	unsigned int grassTexture = loadTexture("Res/Texture/grass.png");
+	unsigned int grassTexture = loadTexture("../openGLearn/Res/Texture/grass.png");
 #endif
 	//采样材质边缘时，顶部透明部分与相邻的（GL_REPEAT方式下产生的）底部非透明部分插值会产生有色边缘，
 	//需将材质设为GL_CLAMP_TO_EDGE以消除边界外部分的非透明图像
@@ -1605,7 +1631,8 @@ int drawWithCulling(GLFWwindow* window)
 	glFrontFace(GL_CCW);
 
 
-	CustomShader myShader("ShaderSource/CoordSystem.vs", "ShaderSource/CoordSystem.fs");
+	CustomShader myShader("../openGLearn/ShaderSource/CoordSystem.vs",
+	        "../openGLearn/ShaderSource/CoordSystem.fs");
 
 	//逆时针定义的顶点，包括正面和背面
 	float cubeVertices[] = {
@@ -1664,7 +1691,7 @@ int drawWithCulling(GLFWwindow* window)
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 
-	unsigned int cubeTexture = loadTexture("Res/Texture/container2.png");
+	unsigned int cubeTexture = loadTexture("../openGLearn/Res/Texture/container2.png");
 
 	myShader.use();
 	myShader.setInt("texture1", 0);

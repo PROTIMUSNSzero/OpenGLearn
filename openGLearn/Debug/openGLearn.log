@@ -1,0 +1,16 @@
+﻿  Main.cpp
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Model.h(21,10): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Mesh.h(79,59): warning C4244: 'argument': conversion from 'unsigned int' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(100,11): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(101,11): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(105,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(106,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(107,10): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(108,10): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(115,28): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(343,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(643,22): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(794,22): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(1008,22): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\Craeting\OpenGL\OpenGLearn\openGLearn\Main.cpp(1160,22): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+  openGLearn.vcxproj -> D:\Craeting\OpenGL\OpenGLearn\Debug\openGLearn.exe

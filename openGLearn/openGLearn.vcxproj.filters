@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="glad.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C2_UniformFieldAndDataStruct.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stb_image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ShaderSource\Rectangle.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Rectangle.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Texture.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Texture.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Triangle.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Triangle.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Color.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Color.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\CoordSystem.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\CoordSystem.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\LightColor.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Lighting.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Lighting.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Material.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Material.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\LightMaps.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\LightMaps.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\DirectionalLight.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\PointLight.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Spotlight.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Multilights.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Model.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Model.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Skybox.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Skybox.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\StencilTest.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\StencilTest.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\StencilSingleColor.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\StencilSingleColor.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ShaderSource\Grass.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="openGLearn.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Res\awesomeface.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Res\container.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Res\Texture\container2.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Res\Texture\container2_specular.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\README.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+  </ItemGroup>
+</Project>

@@ -36,6 +36,7 @@ enum DrawMethodEnum
 	DrawWithStencilTest = 6,
 	DrawWithBlending = 7,
 	DrawWithCulling = 8,
+	DrawWithFramebuffer = 9,
 };
 
 //#define DRAW_TRIANGLE  //绘制三角形
@@ -166,7 +167,7 @@ int drawModel(GLFWwindow* window);
 int drawWithStencilTest(GLFWwindow* window);
 int drawWithBlending(GLFWwindow* window);
 int drawWithCulling(GLFWwindow* window);
-int drawFrameBuffer(GLFWwindow* window);
+int drawWithFramebuffer(GLFWwindow* window);
 
 int main()
 {
@@ -223,6 +224,8 @@ int main()
 		return drawWithBlending(window);
 	case (int)DrawWithCulling:
 		return drawWithCulling(window);
+    case (int)DrawWithFramebuffer:
+        return drawWithFramebuffer(window);
 	default:
 		return drawNothin(window);
 	}
@@ -1726,21 +1729,19 @@ int drawWithCulling(GLFWwindow* window)
 
 	glfwTerminate();
 	return 0;
-
-	return 0;
 }
 
-int drawframeBuffer(GLFWwindow *window)
+int drawWithFramebuffer(GLFWwindow *window)
 {
     glEnable(GL_DEPTH_TEST);
 
-    CustomShader shader1("../openGLearn/ShaderSource/Framebuffer.vs",
-            "../openGLearn/ShaderSource/Framebuffer.fs");
+    CustomShader shader1("../openGLearn/ShaderSource/Triangle.vs",
+            "../openGLearn/ShaderSource/StencilTest.fs");
     CustomShader shader2("../openGLearn/ShaderSource/Framebuffer.vs",
             "../openGLearn/ShaderSource/Framebuffer.fs");
 
-    float cubeVertices[] = {
-        // positions          // texture Coords
+    float cubeVertices[] =
+    {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
@@ -1783,8 +1784,8 @@ int drawframeBuffer(GLFWwindow *window)
         -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
         -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
-    float planeVertices[] = {
-        // positions          // texture Coords
+    float planeVertices[] =
+    {
          5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
         -5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
         -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
@@ -1793,7 +1794,8 @@ int drawframeBuffer(GLFWwindow *window)
         -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
         5.0f, -0.5f, -5.0f,  2.0f, 2.0f
     };
-    float quadVertices[] = {
+    float quadVertices[] =
+    {
         // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
         // positions   // texCoords
         -1.0f,  1.0f,  0.0f, 1.0f,
@@ -1845,9 +1847,14 @@ int drawframeBuffer(GLFWwindow *window)
     shader1.setInt("screenTexture", 0);
 
     unsigned int framebuffer;
+    //创建、绑定帧缓冲对象
     glGenFramebuffers(1, &framebuffer);
+    //绑定之后，所有读取和/或写入帧缓冲的操作都会影响到当前绑定的帧缓冲
+    //第1参数：绑定目标。GL_READ_FRAMEBUFFER：用于读取操作；GL_DRAW_FRAMEBUFFER：用于渲染、清除等写入操作；
+    //GL_FRAMEBUFFER：用于读和写操作
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
+    //创建纹理缓冲对象并作为附件添加至帧缓冲中
     unsigned int textureColorBuffer;
     glGenTextures(1, &textureColorBuffer);
     glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
@@ -1855,17 +1862,29 @@ int drawframeBuffer(GLFWwindow *window)
        GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //帧缓冲添加纹理缓冲对象作为附件（纹理对象作为深度/模板/颜色纹理依附于帧缓冲目标中）
+    //第2参数:附件类型。GL_COLOR_ATTACHMENT0：颜色附件；GL_DEPTH_ATTACHMENT0：深度缓冲附件；
+    //GL_STENCIL_ATTACHMENT：模板缓冲附件；GL_DEPTH_STENCIL_ATTACHMENT：深度加模板缓冲附件；
+    //可将深度和模板缓冲添加到1个单独的纹理中，纹理的32位包含24位深度信息和8位模板信息
+    //第3参数：纹理类型;第5参数：多级渐远纹理级别；
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer, 0);
 
+    //创建渲染缓冲对象并作为附件添加到帧缓冲中
     unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
+    //绑定渲染缓冲对象，使之后的渲染缓冲操作能够影响当前的渲染缓冲对象
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    //为渲染缓冲对象的图像分配内存等（不赋值）
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WindowWidth, SCR_WindowHeight);
+    //附加渲染缓冲对象到绑定的帧缓冲目标中
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER != GL_FRAMEBUFFER_COMPLETE))
+    //检查当前绑定的帧缓冲对象是否完整
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
-        cout << "ERROR::FRAMEBUFFER:: Framebuffer is not compelete!" << endl;
+        cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << endl;
     }
+    //将默认帧缓冲绑定至帧缓冲目标中（此为GL_FRAMEBUFFER）
+    //即激活为默认帧缓冲，否则会渲染到创建的帧缓冲对象中，不在窗口显示（离屏渲染）
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     while(!glfwWindowShouldClose(window))
@@ -1886,7 +1905,7 @@ int drawframeBuffer(GLFWwindow *window)
         mat4 model = mat4(1.0f);
         mat4 view = camera.GetViewMatrix();
         mat4 projection = perspective(radians(camera.Zoom),
-                (float)SCR_WindowWidth / (float)SCR_WindowHeight, 0.1f, 100.0f);
+            (float) SCR_WindowWidth / (float) SCR_WindowHeight, 0.1f, 100.0f);
         shader1.setMat4("view", view);
         shader1.setMat4("projection", projection);
 

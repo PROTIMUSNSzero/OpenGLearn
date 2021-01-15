@@ -1869,7 +1869,7 @@ int drawWithFramebuffer(GLFWwindow *window)
     //第3参数：纹理类型;第5参数：多级渐远纹理级别；
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer, 0);
 
-    //创建渲染缓冲对象并作为附件添加到帧缓冲中
+    //创建渲染缓冲对象并作为附件添加到帧缓冲中（此处用于深度测试和模板测试）
     unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
     //绑定渲染缓冲对象，使之后的渲染缓冲操作能够影响当前的渲染缓冲对象

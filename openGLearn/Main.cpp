@@ -1733,9 +1733,13 @@ int drawWithCulling(GLFWwindow* window)
 
 int drawWithFramebuffer(GLFWwindow *window)
 {
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
     glEnable(GL_DEPTH_TEST);
 
-    CustomShader shader1("../openGLearn/ShaderSource/Triangle.vs",
+    CustomShader shader1("../openGLearn/ShaderSource/StencilTest.vs",
             "../openGLearn/ShaderSource/StencilTest.fs");
     CustomShader shader2("../openGLearn/ShaderSource/Framebuffer.vs",
             "../openGLearn/ShaderSource/Framebuffer.fs");
@@ -1814,7 +1818,7 @@ int drawWithFramebuffer(GLFWwindow *window)
     glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 
@@ -1844,7 +1848,10 @@ int drawWithFramebuffer(GLFWwindow *window)
     unsigned int floorTexture = loadTexture("../openGLearn/Res/Texture/floor.jpg");
 
     shader1.use();
-    shader1.setInt("screenTexture", 0);
+    shader1.setInt("texture1", 0);
+
+    shader2.use();
+    shader2.setInt("screenTexture", 0);
 
     unsigned int framebuffer;
     //创建、绑定帧缓冲对象

@@ -38,6 +38,7 @@ enum DrawMethodEnum
 	DrawWithCulling = 8,
 	DrawWithFramebuffer = 9,
 	DrawWithSkybox = 10,
+	DrawWithAdvancedData = 11,
 };
 
 //#define DRAW_TRIANGLE  //绘制三角形
@@ -56,8 +57,7 @@ enum DrawMethodEnum
 
 #define DRAW_CULL_FRONT
 
-//#define DRAW_CUBEMAP_REFLECTION
-#define DRAW_CUBEMAP_REFRACTION
+#define DRAW_CUBEMAP_LIGHTING
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -207,6 +207,7 @@ int drawWithBlending(GLFWwindow* window);
 int drawWithCulling(GLFWwindow* window);
 int drawWithFramebuffer(GLFWwindow* window);
 int drawSkybox(GLFWwindow* window);
+int drawWithAdvancedData(GLFWwindow* window);
 
 int main()
 {
@@ -267,6 +268,8 @@ int main()
         return drawWithFramebuffer(window);
     case (int)DrawWithSkybox:
         return drawSkybox(window);
+    case (int)DrawWithAdvancedData:
+        return drawWithAdvancedData(window);
 	default:
 		return drawNothin(window);
 	}
@@ -2170,14 +2173,11 @@ int drawSkybox(GLFWwindow *window)
         shader1.setMat4("view", view);
         shader1.setMat4("projection", projection);
         shader1.setVec3("cameraPos", camera.Position);
-#ifdef DRAW_CUBEMAP_REFLECTION
-        shader1.setInt("drawType", 1);
+        shader1.setInt("windowWidth", SCR_WindowWidth);
+#ifdef DRAW_CUBEMAP_LIGHTING
+        shader1.setBool("drawLighting", true);
 #else
-#ifdef DRAW_CUBEMAP_REFRACTION
-        shader1.setInt("drawType", 2);
-#else
-        shader1.setInt("drawType", 0);
-#endif
+        shader1.setBool("drawLighting", false);
 #endif
 
         glActiveTexture(GL_TEXTURE0);
@@ -2188,6 +2188,7 @@ int drawSkybox(GLFWwindow *window)
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
 
+        //深度模板重置(glClear)后值为1，为保证深度值同为1（xyww）的天空盒正常渲染，需设置深度测试为LEQUAL
         glDepthFunc(GL_LEQUAL);
         shader2.use();
         view = mat4(mat3(camera.GetViewMatrix()));
@@ -2213,3 +2214,152 @@ int drawSkybox(GLFWwindow *window)
     glfwTerminate();
 	return 0;
 }
+
+int drawWithAdvancedData(GLFWwindow* window)
+{
+    glEnable(GL_DEPTH_TEST);
+
+    CustomShader shader1("../openGLearn/ShaderSource/AdvancedData.vs",
+        "../openGLearn/ShaderSource/advancedData.fs");
+    CustomShader shader2("../openGLearn/ShaderSource/AdvancedData.vs",
+        "../openGLearn/ShaderSource/advancedData.fs");
+    CustomShader shader3("../openGLearn/ShaderSource/AdvancedData.vs",
+         "../openGLearn/ShaderSource/advancedData.fs");
+    CustomShader shader4("../openGLearn/ShaderSource/AdvancedData.vs",
+         "../openGLearn/ShaderSource/advancedData.fs");
+
+    float cubeVertices[] = {
+        // positions
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        -0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        -0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f,
+    };
+
+    unsigned int cubeVAO, cubeVBO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
+    glBindVertexArray(cubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    unsigned int uniformBlockInd1 = glGetUniformBlockIndex(shader1.ID, "Matrices");
+    unsigned int uniformBlockInd2 = glGetUniformBlockIndex(shader2.ID, "Matrices");
+    unsigned int uniformBlockInd3 = glGetUniformBlockIndex(shader3.ID, "Matrices");
+    unsigned int uniformBlockInd4 = glGetUniformBlockIndex(shader4.ID, "Matrices");
+
+    glUniformBlockBinding(shader1.ID, uniformBlockInd1, 0);
+    glUniformBlockBinding(shader2.ID, uniformBlockInd2, 0);
+    glUniformBlockBinding(shader3.ID, uniformBlockInd3, 0);
+    glUniformBlockBinding(shader4.ID, uniformBlockInd4, 0);
+
+    unsigned int uboMatrices;
+    glGenBuffers(1, &uboMatrices);
+    glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+    glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(mat4), NULL, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(mat4));
+
+    mat4 projection = perspective(45.0f, (float)SCR_WindowWidth / (float)SCR_WindowHeight,
+            0.1f, 100.0f);
+    glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(mat4), value_ptr(projection));
+
+    while(!glfwWindowShouldClose(window))
+    {
+        float currentTime = glfwGetTime();
+        deltaTime = currentTime - lastFrame;
+        lastFrame = currentTime;
+
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        mat4 view = camera.GetViewMatrix();
+        glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+        glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4), sizeof(mat4), value_ptr(view));
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+        glBindVertexArray(cubeVAO);
+        mat4 model = mat4(1.0f);
+        vec4 color;
+
+        shader1.use();
+        model = mat4(1.0f);
+        model = translate(model, vec3(-0.75f, 0.75f, 0.0f));
+        shader1.setMat4("model", model);
+        color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+        shader1.setVec4("color", color);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        shader2.use();
+        model = mat4(1.0f);
+        model = translate(model, vec3(0.75f, 0.75f, 0.0f));
+        shader2.setMat4("model", model);
+        color = vec4(0.0f, 1.0f, 0.0f, 1.0f);
+        shader1.setVec4("color", color);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        shader3.use();
+        model = mat4(1.0f);
+        model = translate(model, vec3(-0.75f, -0.75f, 0.0f));
+        shader3.setMat4("model", model);
+        color = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+        shader1.setVec4("color", color);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        shader4.use();
+        model = mat4(1.0f);
+        model = translate(model, vec3(0.75f, -0.75f, 0.0f));
+        shader4.setMat4("model", model);
+        color = vec4(0.0f, 1.0f, 1.0f, 1.0f);
+        shader1.setVec4("color", color);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    glDeleteVertexArrays(1, &cubeVAO);
+    glDeleteBuffers(1, &cubeVBO);
+
+    glfwTerminate();
+    return 0;
+}
+
+

@@ -2,7 +2,7 @@
 out vec4 FragColor;
 
 in vec3 TexCoords;
-
+//立方体贴图采样器
 uniform samplerCube skybox;
 
 void main()

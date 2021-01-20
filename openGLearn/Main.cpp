@@ -56,6 +56,9 @@ enum DrawMethodEnum
 
 #define DRAW_CULL_FRONT
 
+//#define DRAW_CUBEMAP_REFLECTION
+#define DRAW_CUBEMAP_REFRACTION
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -149,7 +152,7 @@ unsigned int loadTexture(const char* path)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
-	else 
+	else
 	{
 		cout << "Texture failed to load at path " << path << endl;
 	}
@@ -165,6 +168,7 @@ unsigned int loadCubemap(vector<const char*> faces)
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
     int width, height, nrComponents;
+    //纹理目标顺序：右 左 上 下 后 前 枚举值递增
     for(unsigned int i = 0; i < faces.size(); i++)
     {
         unsigned char* data = stbi_load(faces[i], &width, &height, &nrComponents, 0);
@@ -185,6 +189,7 @@ unsigned int loadCubemap(vector<const char*> faces)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //GL_TEXTURE_WRAP_R（z维度）
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     return textureID;
@@ -207,7 +212,7 @@ int main()
 {
 	int drawEnum;
 	cin >> drawEnum;
-	
+
 	//???????????glfw?????????????????????????
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -216,7 +221,7 @@ int main()
 	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 	//???????????
-	GLFWwindow* window = glfwCreateWindow(SCR_WindowWidth, SCR_WindowHeight, "LearnOpenGL", 
+	GLFWwindow* window = glfwCreateWindow(SCR_WindowWidth, SCR_WindowHeight, "LearnOpenGL",
 		NULL, NULL);
 	if (window == NULL)
 	{
@@ -294,7 +299,7 @@ int drawTriangleOrRetangle(GLFWwindow *window)
 	float vertices[] =
 	{	//位置				//颜色
 		-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 
+		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
 		0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
 	};
 	//矩形顶点
@@ -327,7 +332,7 @@ int drawTriangleOrRetangle(GLFWwindow *window)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 	//??????????????OpenGL?????????????????????????VBO??
-	// ????????			 
+	// ????????
 	//??2??????????????????????????????????
 	//??????????????????????????????????????0?????????????3 float
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
@@ -465,14 +470,14 @@ int drawWithTextureAndTransform(GLFWwindow* window)
 	glEnableVertexAttribArray(0);
 
 
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
 		(void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
 	//创建、绑定纹理对象
 	unsigned int texture1, texture2;
 	//第1参数：生成纹理对象的数量
-	glGenTextures(1, &texture1); 
+	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1);
 	//设置纹理环绕方式（超出范围的纹理图像设置），包括S（缩放）、T（变换）
 	//环绕方式：REPEAT：重复图像（默认）；MIRRORED_REPEAT：镜像重复；CLAMP_TO_EDGE：边界拉伸；
@@ -551,7 +556,7 @@ int drawWithTextureAndTransform(GLFWwindow* window)
 
 		myShader.use();
 
-		//传递uniform变换矩阵 
+		//传递uniform变换矩阵
 		//2参数：矩阵数量；3参数：是否转置（glm矩阵默认为列布局，无需转置）；数据用value_ptr方法转变
 		unsigned int transformLoc = glGetUniformLocation(myShader.ID, "transform");
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, value_ptr(transform));
@@ -659,7 +664,7 @@ int drawInCoordSystem(GLFWwindow* window)
 	glEnableVertexAttribArray(1);
 
 	unsigned int texture1;
-	
+
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1);
 
@@ -717,7 +722,7 @@ int drawInCoordSystem(GLFWwindow* window)
 			0.1f, 100.0f);
 #endif
 		myShader.setMat4("projection", projection);
-		
+
 
 		glBindVertexArray(VAO);
 		for (unsigned int i = 0; i < 10; i++)
@@ -797,7 +802,7 @@ int drawColor(GLFWwindow* window)
 		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
 		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f, 
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
 		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
 		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
@@ -925,7 +930,7 @@ int drawColor(GLFWwindow* window)
 
 		//绘制光照物体
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-	
+
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -964,7 +969,7 @@ int drawMultiLights(GLFWwindow* window)
 	        "../openGLearn/ShaderSource/Spotlight.fs");
 #endif
 #endif
-#endif 
+#endif
 #endif
 
 	//点光源位置
@@ -1018,7 +1023,7 @@ int drawMultiLights(GLFWwindow* window)
 		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
 	};
 
-	vec3 cubePositions[] = 
+	vec3 cubePositions[] =
 	{
 		vec3( 0.0f,  0.0f,  0.0f),
 		vec3( 2.0f,  5.0f, -15.0f),
@@ -1385,7 +1390,7 @@ int drawWithStencilTest(GLFWwindow* window)
 		//比较方法为：(ref & mask) Op (模板缓冲值stencil & mask)
 		//mask通常为0xFF，不影响比较
 		glStencilFunc(GL_ALWAYS, 1, 0xFF);
-	
+
 		glStencilMask(0xFF);
 
 		//绘制方块并更新模板缓冲
@@ -1665,7 +1670,7 @@ int drawWithCulling(GLFWwindow* window)
 #ifdef DRAW_CULL_FRONT
 	//选择剔除的面；GL_FRONT：剔除正向面；GL_BACK：剔除背向面
 	glCullFace(GL_FRONT);
-#else 
+#else
 	glCullFace(GL_BACK);
 #endif
 	//CCW：逆时针代表正向面；CW：顺时针代表正向面
@@ -1680,7 +1685,7 @@ int drawWithCulling(GLFWwindow* window)
 		// Back face
 		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // Bottom-left
 		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
-		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right         
+		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right
 		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
 		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
 		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
@@ -1701,10 +1706,10 @@ int drawWithCulling(GLFWwindow* window)
 		// Right face
 		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
 		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right         
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
 		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
 		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
-		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left     
+		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
 		// Bottom face
 		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
 		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f, // top-left
@@ -1715,10 +1720,10 @@ int drawWithCulling(GLFWwindow* window)
 		// Top face
 		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
 		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right     
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
 		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
 		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left       
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left
 	};
 
 	unsigned int cubeVAO, cubeVBO;
@@ -2016,55 +2021,56 @@ int drawSkybox(GLFWwindow *window)
             "../openGLearn/ShaderSource/Skybox.fs");
 
     float cubeVertices[] = {
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         //position           //texCoords   //normal
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,  0.0f,  0.0f, -1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,  0.0f,  0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  0.0f,  0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  0.0f,  0.0f, -1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  0.0f,  0.0f, -1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,  0.0f,  0.0f, -1.0f,
 
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,  0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,  0.0f,  0.0f,  1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,  0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  0.0f,  0.0f,  1.0f,
 
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, -1.0f,  0.0f,  0.0f,
 
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f,  0.0f,  0.0f,
 
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  0.0f, -1.0f,  0.0f,
 
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  0.0f,  1.0f,  0.0f,
     };
     float skyboxVertices[] = {
         // positions
         -1.0f,  1.0f, -1.0f,
         -1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
         -1.0f,  1.0f, -1.0f,
 
         -1.0f, -1.0f,  1.0f,
@@ -2074,33 +2080,33 @@ int drawSkybox(GLFWwindow *window)
         -1.0f,  1.0f,  1.0f,
         -1.0f, -1.0f,  1.0f,
 
-        1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
 
         -1.0f, -1.0f,  1.0f,
         -1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
         -1.0f, -1.0f,  1.0f,
 
         -1.0f,  1.0f, -1.0f,
-        1.0f,  1.0f, -1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
         -1.0f,  1.0f,  1.0f,
         -1.0f,  1.0f, -1.0f,
 
         -1.0f, -1.0f, -1.0f,
         -1.0f, -1.0f,  1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
         -1.0f, -1.0f,  1.0f,
-        1.0f, -1.0f,  1.0f
+         1.0f, -1.0f,  1.0f
     };
 
     unsigned int cubeVAO, cubeVBO;
@@ -2110,9 +2116,11 @@ int drawSkybox(GLFWwindow *window)
     glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*) (3 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
 
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -2137,7 +2145,8 @@ int drawSkybox(GLFWwindow *window)
     unsigned int cubeTexture = loadTexture("../openGLearn/Res/Texture/container.jpg");
 
     shader1.use();
-    shader1.setInt("texture1", 0);
+    shader1.setInt("skybox", 0);
+    shader1.setInt("texture1", 1);
     shader2.use();
     shader2.setInt("skybox", 0);
 
@@ -2161,9 +2170,20 @@ int drawSkybox(GLFWwindow *window)
         shader1.setMat4("view", view);
         shader1.setMat4("projection", projection);
         shader1.setVec3("cameraPos", camera.Position);
+#ifdef DRAW_CUBEMAP_REFLECTION
+        shader1.setInt("drawType", 1);
+#else
+#ifdef DRAW_CUBEMAP_REFRACTION
+        shader1.setInt("drawType", 2);
+#else
+        shader1.setInt("drawType", 0);
+#endif
+#endif
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubeTexture);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, cubeTexture);
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);

@@ -2218,15 +2218,17 @@ int drawSkybox(GLFWwindow *window)
 int drawWithAdvancedData(GLFWwindow* window)
 {
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     CustomShader shader1("../openGLearn/ShaderSource/AdvancedData.vs",
-        "../openGLearn/ShaderSource/advancedData.fs");
+        "../openGLearn/ShaderSource/AdvancedData.fs");
     CustomShader shader2("../openGLearn/ShaderSource/AdvancedData.vs",
-        "../openGLearn/ShaderSource/advancedData.fs");
+        "../openGLearn/ShaderSource/AdvancedData.fs");
     CustomShader shader3("../openGLearn/ShaderSource/AdvancedData.vs",
-         "../openGLearn/ShaderSource/advancedData.fs");
+         "../openGLearn/ShaderSource/AdvancedData.fs");
     CustomShader shader4("../openGLearn/ShaderSource/AdvancedData.vs",
-         "../openGLearn/ShaderSource/advancedData.fs");
+         "../openGLearn/ShaderSource/AdvancedData.fs");
 
     float cubeVertices[] = {
         // positions
@@ -2282,11 +2284,14 @@ int drawWithAdvancedData(GLFWwindow* window)
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
+    //返回shader程序中uniform块的索引，与之后的glUniformBlockBinding共同使用
     unsigned int uniformBlockInd1 = glGetUniformBlockIndex(shader1.ID, "Matrices");
     unsigned int uniformBlockInd2 = glGetUniformBlockIndex(shader2.ID, "Matrices");
     unsigned int uniformBlockInd3 = glGetUniformBlockIndex(shader3.ID, "Matrices");
     unsigned int uniformBlockInd4 = glGetUniformBlockIndex(shader4.ID, "Matrices");
-
+    //将shader程序中的uniform块绑定到uniform缓冲的指定绑定点中，之后再将缓冲对象连接至同一绑定点后，
+    //shader的uniform块便可与uniform缓冲连接在一起
+    //第3参数为绑定点
     glUniformBlockBinding(shader1.ID, uniformBlockInd1, 0);
     glUniformBlockBinding(shader2.ID, uniformBlockInd2, 0);
     glUniformBlockBinding(shader3.ID, uniformBlockInd3, 0);
@@ -2295,14 +2300,31 @@ int drawWithAdvancedData(GLFWwindow* window)
     unsigned int uboMatrices;
     glGenBuffers(1, &uboMatrices);
     glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+    //开辟缓冲内存空间，不赋值（NULL）
     glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(mat4), NULL, GL_STATIC_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    //将uniform缓冲对象绑定至指定的绑定点中，功能同glBindBufferBase。
+    //可将多个缓冲对象绑定至不同绑定点中，对应shader中不同的uniform块。
+    //第2参数为绑定点；第3参数为缓冲对象；第4参数为缓冲对象起始位置偏移量；第5参数为数据长度；
     glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(mat4));
 
     mat4 projection = perspective(45.0f, (float)SCR_WindowWidth / (float)SCR_WindowHeight,
-            0.1f, 100.0f);
+        0.1f, 100.0f);
     glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+    //设置部分缓冲数据。第2参数为对其偏移量；第3参数为基准对齐量；
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(mat4), value_ptr(projection));
+
+    //该uniform缓冲数据对应的uniform块的绑定点由shader内部定义（不使用glGetUniformBlockBinding）
+    unsigned int uboAlpha;
+    glGenBuffers(1, &uboAlpha);
+    glBindBuffer(GL_UNIFORM_BUFFER, uboAlpha);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(float), NULL, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 1, uboAlpha, 0, sizeof(float));
+    float alpha = 0.5f;
+    glBindBuffer(GL_UNIFORM_BUFFER, uboAlpha);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(float), &alpha);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     while(!glfwWindowShouldClose(window))
     {

@@ -39,6 +39,7 @@ enum DrawMethodEnum
 	DrawWithFramebuffer = 9,
 	DrawWithSkybox = 10,
 	DrawWithAdvancedData = 11,
+	DrawWithGeometryShader = 12,
 };
 
 //#define DRAW_TRIANGLE  //»æÖÆÈý½ÇÐÎ
@@ -208,6 +209,7 @@ int drawWithCulling(GLFWwindow* window);
 int drawWithFramebuffer(GLFWwindow* window);
 int drawSkybox(GLFWwindow* window);
 int drawWithAdvancedData(GLFWwindow* window);
+int drawWithGeometryShader(GLFWwindow* window);
 
 int main()
 {
@@ -270,6 +272,8 @@ int main()
         return drawSkybox(window);
     case (int)DrawWithAdvancedData:
         return drawWithAdvancedData(window);
+    case (int)DrawWithGeometryShader:
+        return drawWithGeometryShader(window);
 	default:
 		return drawNothin(window);
 	}
@@ -2384,4 +2388,50 @@ int drawWithAdvancedData(GLFWwindow* window)
     return 0;
 }
 
+int drawWithGeometryShader(GLFWwindow* window) {
+    glEnable(GL_DEPTH_TEST);
+
+    CustomShader shader1("../openGLearn/ShaderSource/Geometry.vs",
+                         "../openGLearn/ShaderSource/Geometry.fs",
+                         "../openGLearn/ShaderSource/Geometry.gs");
+
+    float points[] =
+    {
+        -0.2f,  0.2f, 1.0f, 0.0f, 0.0f, // top-left
+         0.2f,  0.2f, 0.0f, 1.0f, 0.0f, // top-right
+         0.2f, -0.2f, 0.0f, 0.0f, 1.0f, // bottom-right
+        -0.2f, -0.2f, 1.0f, 1.0f, 0.0f,
+    };
+
+    unsigned int VBO, VAO;
+    glGenBuffers(1, &VBO);
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(points), &points, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
+    glBindVertexArray(0);
+
+    while(!glfwWindowShouldClose(window))
+    {
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        shader1.use();
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_POINT, 0, 4);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+
+    glfwTerminate();
+    return 0;
+}
 

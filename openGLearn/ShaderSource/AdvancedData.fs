@@ -1,6 +1,6 @@
 #version 460 core
 
-//binding值设置功能同程序设置绑定点（glUniformBlockBinding）
+//绑定点设置（同glUniformBlockBinding）
 layout (std140, binding = 1) uniform Alpha
 {
     float alpha;

@@ -2219,6 +2219,7 @@ int drawSkybox(GLFWwindow *window)
 	return 0;
 }
 
+//高级GLSL数据
 int drawWithAdvancedData(GLFWwindow* window)
 {
     glEnable(GL_DEPTH_TEST);
@@ -2388,6 +2389,7 @@ int drawWithAdvancedData(GLFWwindow* window)
     return 0;
 }
 
+//几何shader
 int drawWithGeometryShader(GLFWwindow* window) {
     glEnable(GL_DEPTH_TEST);
 
@@ -2397,10 +2399,10 @@ int drawWithGeometryShader(GLFWwindow* window) {
 
     float points[] =
     {
-        -0.2f,  0.2f, 1.0f, 0.0f, 0.0f, // top-left
-         0.2f,  0.2f, 0.0f, 1.0f, 0.0f, // top-right
-         0.2f, -0.2f, 0.0f, 0.0f, 1.0f, // bottom-right
-        -0.2f, -0.2f, 1.0f, 1.0f, 0.0f,
+        -0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // top-left
+         0.5f,  0.5f, 0.0f, 1.0f, 0.0f, // top-right
+         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // bottom-right
+        -0.5f, -0.5f, 1.0f, 1.0f, 0.0f, // bottom-left
     };
 
     unsigned int VBO, VAO;
@@ -2422,7 +2424,8 @@ int drawWithGeometryShader(GLFWwindow* window) {
 
         shader1.use();
         glBindVertexArray(VAO);
-        glDrawArrays(GL_POINT, 0, 4);
+        //渲染图元类型为点类型
+        glDrawArrays(GL_POINTS, 0, 4);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

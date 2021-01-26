@@ -38,6 +38,7 @@ public:
 	vector<Vertex> vertices;
 	vector<unsigned int> indices;
 	vector<Texture> textures;
+    unsigned int VAO, VBO, EBO;
 
 	Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
 	{
@@ -87,7 +88,6 @@ public:
 	}
 
 private:
-	unsigned int VAO, VBO, EBO;
 
 	void setupMesh()
 	{

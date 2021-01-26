@@ -40,6 +40,8 @@ enum DrawMethodEnum
 	DrawWithSkybox = 10,
 	DrawWithAdvancedData = 11,
 	DrawWithGeometryShader = 12,
+	DrawNormal = 13,
+	DrawInstance = 14,
 };
 
 //#define DRAW_TRIANGLE  //绘制三角形
@@ -210,6 +212,8 @@ int drawWithFramebuffer(GLFWwindow* window);
 int drawSkybox(GLFWwindow* window);
 int drawWithAdvancedData(GLFWwindow* window);
 int drawWithGeometryShader(GLFWwindow* window);
+int drawNormal(GLFWwindow* window);
+int drawInstance(GLFWwindow* window);
 
 int main()
 {
@@ -274,6 +278,10 @@ int main()
         return drawWithAdvancedData(window);
     case (int)DrawWithGeometryShader:
         return drawWithGeometryShader(window);
+    case (int)DrawNormal:
+        return drawNormal(window);
+    case (int)DrawInstance:
+        return drawInstance(window);
 	default:
 		return drawNothin(window);
 	}
@@ -2013,7 +2021,7 @@ int drawWithFramebuffer(GLFWwindow *window)
 
 }
 
-//绘制天空盒
+//绘制天空盒(包括法向量可视化)
 int drawSkybox(GLFWwindow *window)
 {
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -2026,6 +2034,10 @@ int drawSkybox(GLFWwindow *window)
             "../openGLearn/ShaderSource/Cubemap.fs");
     CustomShader shader2("../openGLearn/ShaderSource/Skybox.vs",
             "../openGLearn/ShaderSource/Skybox.fs");
+
+    CustomShader normalShader("../openGLearn/ShaderSource/Normal.vs",
+                              "../openGLearn/ShaderSource/Normal.fs",
+                              "../openGLearn/ShaderSource/Normal.gs");
 
     float cubeVertices[] = {
          //position           //texCoords   //normal
@@ -2138,6 +2150,19 @@ int drawSkybox(GLFWwindow *window)
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
+    unsigned int normalVAO, normalVBO;
+    glGenVertexArrays(1, &normalVAO);
+    glGenBuffers(1, &normalVBO);
+    glBindVertexArray(normalVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+
     vector<const char*> faces
     {
         "../openGLearn/Res/Texture/skybox_right.jpg",
@@ -2192,9 +2217,18 @@ int drawSkybox(GLFWwindow *window)
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
 
+        glBindVertexArray(normalVAO);
+        normalShader.use();
+        normalShader.setMat4("view", view);
+        normalShader.setMat4("projection", projection);
+        normalShader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+
         //深度模板重置(glClear)后值为1，为保证深度值同为1（xyww）的天空盒正常渲染，需设置深度测试为LEQUAL
         glDepthFunc(GL_LEQUAL);
         shader2.use();
+        //只取3x3部分，移除位移效果，只保留旋转效果
         view = mat4(mat3(camera.GetViewMatrix()));
         shader2.setMat4("view", view);
         shader2.setMat4("projection", projection);
@@ -2433,6 +2467,184 @@ int drawWithGeometryShader(GLFWwindow* window) {
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+
+    glfwTerminate();
+    return 0;
+}
+
+//法向量可视化
+int drawNormal(GLFWwindow* window)
+{
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    glEnable(GL_DEPTH_TEST);
+
+    CustomShader normalShader("../openGLearn/ShaderSource/Normal.vs",
+            "../openGLearn/ShaderSource/Normal.fs",
+            "../openGLearn/ShaderSource/Normal.gs");
+    CustomShader shader1("../openGLearn/ShaderSource/Model.vs",
+            "../openGLearn/ShaderSource/Model.fs");
+
+    stbi_set_flip_vertically_on_load(true);
+    Model nanoSuit("../openGLearn/Res/Model/nanosuit/nanosuit.obj");
+
+    while(!glfwWindowShouldClose(window))
+    {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        processInput(window);
+
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        mat4 projection = perspective(radians(camera.Zoom),
+                (float)SCR_WindowWidth / float(SCR_WindowHeight),1.0f, 100.0f);
+        mat4 view = camera.GetViewMatrix();
+        mat4 model = mat4(1.0f);
+        shader1.use();
+        shader1.setMat4("projection", projection);
+        shader1.setMat4("view", view);
+        shader1.setMat4("model", model);
+        nanoSuit.Draw(shader1);
+
+        //绘制法向量
+        normalShader.use();
+        normalShader.setMat4("projection", projection);
+        normalShader.setMat4("view", view);
+        normalShader.setMat4("model", model);
+        nanoSuit.Draw(normalShader);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    glfwTerminate();
+    return 0;
+}
+
+//实例化绘制
+int drawInstance(GLFWwindow* window)
+{
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+
+    CustomShader asteroidShader("../openGLearn/ShaderSource/Instance.vs",
+        "../openGLearn/ShaderSource/Model.fs");
+    CustomShader planetShader("../openGLearn/ShaderSource/Model.vs",
+        "../openGLearn/ShaderSource/Model.fs");
+
+    Model asteroid("../openGLearn/Res/Model/rock/rock.obj");
+    Model planet("../openGLearn/Res/Model/planet/planet.obj");
+
+    unsigned int amount = 100000;
+
+    //实例化数组存储所有实例化模型的世界变换数据
+    mat4* modelMatrices;
+    modelMatrices = new mat4[amount];
+    srand(glfwGetTime());
+    float radius = 40.0f;
+    float offset = 5.0f;
+    for(unsigned int i = 0; i < amount; i++)
+    {
+        mat4 model = mat4(1.0f);
+        float angle = (float)i / (float)amount * 360.0f;
+        float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float x = sin(angle) * radius + displacement;
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float y = displacement * 0.02f;
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float z = cos(angle) * radius + displacement;
+        model = translate(model, vec3(x, y, z));
+
+        float scaleAmt = (rand() % 20) / 500.0f + 0.05f;
+        model = scale(model, vec3(scaleAmt));
+
+        float rotAngle = (rand() % 360);
+        model = rotate(model, rotAngle, vec3(0.4f, 0.6f, 0.8f));
+
+        modelMatrices[i] = model;
+    }
+
+    unsigned int buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, amount * sizeof(mat4), &modelMatrices[0], GL_STATIC_DRAW);
+
+    for(unsigned int i = 0; i < asteroid.meshes.size(); i++)
+    {
+        unsigned int VAO = asteroid.meshes[i].VAO;
+        glBindVertexArray(VAO);
+        //存储mat4实例数据，分为4个vec4数据存储 （layout (location = 3) in mat4 ...）
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mat4), (void*)0);
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(mat4), (void*)(sizeof(vec4)));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(mat4), (void*)(2 * sizeof(vec4)));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(mat4), (void*)(3 * sizeof(vec4)));
+
+        //指定更新实例顶点属性至下1组数据的频率；0：每个顶点shader迭代都更新；1：渲染每个实例时更新顶点属性；
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+
+        glBindVertexArray(0);
+    }
+
+    while(!glfwWindowShouldClose(window))
+    {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        processInput(window);
+
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        mat4 projection = perspective(radians(camera.Zoom),
+            (float)SCR_WindowWidth / (float)SCR_WindowHeight, 0.1f, 1000.0f);
+        mat4 view = camera.GetViewMatrix();
+        view = translate(view, vec3(0.0f, -2.0f, -50.0f));
+        asteroidShader.use();
+        asteroidShader.setMat4("projection", projection);
+        asteroidShader.setMat4("view", view);
+        planetShader.use();
+        planetShader.setMat4("projection", projection);
+        planetShader.setMat4("view", view);
+
+        mat4 model = mat4(1.0f);
+        model = translate(model, vec3(0.0f, -6.0f, -0.0f));
+        model = scale(model, vec3(8.0f));
+        planetShader.setMat4("model", model);
+        planet.Draw(planetShader);
+
+        asteroidShader.use();
+        asteroidShader.setInt("texture_diffuse", 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, asteroid.textures_loaded[0].id);
+        for(unsigned int i = 0; i < asteroid.meshes.size(); i++)
+        {
+            glBindVertexArray(asteroid.meshes[i].VAO);
+            //实例化渲染
+            glDrawElementsInstanced(GL_TRIANGLES, asteroid.meshes[i].indices.size(), GL_UNSIGNED_INT,
+                0, amount);
+            glBindVertexArray(0);
+        }
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
 
     glfwTerminate();
     return 0;

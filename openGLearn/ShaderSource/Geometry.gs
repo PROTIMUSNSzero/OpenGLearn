@@ -7,7 +7,7 @@ layout (points) in;
 //points; line_strip; triangle_strip
 layout (triangle_strip, max_vertices = 5) out;
 
-//输入接口块，同顶点shader的输出接口块。此处为1个输入图元的所有顶点。points输入图元类型只接收1个顶点
+//输入接口块，同顶点shader的输出接口块。此处为1个输入图元的所有数据，即1个顶点。
 in V2G
 {
     vec3 color;

@@ -61,6 +61,8 @@ enum DrawMethodEnum
 
 #define DRAW_CULL_FRONT
 
+const int DRAW_FRAMEBUFFER_TYPE = 4;
+
 #define DRAW_CUBEMAP_LIGHTING
 
 
@@ -1233,7 +1235,7 @@ int drawModel(GLFWwindow* window)
 		return -1;
 	}
 
-	stbi_set_flip_vertically_on_load(true);
+	stbi_set_flip_vertically_on_load(false);
 
 	glEnable(GL_DEPTH_TEST);
 	//深度测试 通过方法，默认为LESS，即深度小于模板参数时通过测试，否则丢弃
@@ -1919,6 +1921,7 @@ int drawWithFramebuffer(GLFWwindow *window)
 
     shader2.use();
     shader2.setInt("screenTexture", 0);
+    shader2.setInt("drawType", DRAW_FRAMEBUFFER_TYPE);
 
     unsigned int framebuffer;
     //创建、绑定帧缓冲对象
@@ -1936,6 +1939,9 @@ int drawWithFramebuffer(GLFWwindow *window)
        GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //防止采样屏幕图像边缘时出现问题
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     //帧缓冲添加纹理缓冲对象作为附件（纹理对象作为深度/模板/颜色纹理依附于帧缓冲目标中）
     //第2参数:附件类型。GL_COLOR_ATTACHMENT0：颜色附件；GL_DEPTH_ATTACHMENT0：深度缓冲附件；
     //GL_STENCIL_ATTACHMENT：模板缓冲附件；GL_DEPTH_STENCIL_ATTACHMENT：深度加模板缓冲附件；
@@ -2496,7 +2502,6 @@ int drawNormal(GLFWwindow* window)
     CustomShader shader1("../openGLearn/ShaderSource/Model.vs",
             "../openGLearn/ShaderSource/Model.fs");
 
-    stbi_set_flip_vertically_on_load(true);
     Model nanoSuit("../openGLearn/Res/Model/nanosuit/nanosuit.obj");
 
     while(!glfwWindowShouldClose(window))
@@ -2798,6 +2803,7 @@ int drawWithAntiAliasing(GLFWwindow* window)
 
     screenShader.use();
     screenShader.setInt("screenTexture", 0);
+    screenShader.setInt("drawType", 0);
 
     while(!glfwWindowShouldClose(window))
     {

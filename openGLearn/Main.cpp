@@ -43,6 +43,28 @@ enum DrawMethodEnum
 	DrawNormal = 13,
 	DrawInstance = 14,
 	DrawWithAntiAliasing = 15,
+	DrawWithGammaCorrection = 16,
+};
+
+vector<string> DrawMethodStr
+{
+    "DrawTriangleOrRetangle     ",
+    "DrawWithTextureAndTransform",
+    "DrawInCoordSystem          ",
+    "DrawColor                  ",
+    "DrawMultiLights            ",
+    "DrawModel                  ",
+    "DrawWithStencilTest        ",
+    "DrawWithBlending           ",
+    "DrawWithCulling            ",
+    "DrawWithFramebuffer        ",
+    "DrawWithSkybox             ",
+    "DrawWithAdvancedData       ",
+    "DrawWithGeometryShader     ",
+    "DrawNormal                 ",
+    "DrawInstance               ",
+    "DrawWithAntiAliasing       ",
+    "DrawWithGammaCorrection    ",
 };
 
 //#define DRAW_TRIANGLE  //绘制三角形
@@ -126,7 +148,7 @@ void scroll_callback(GLFWwindow* window, double xOffset, double yOffset)
 	camera.ProcessMouseScroll(yOffset);
 }
 
-unsigned int loadTexture(const char* path)
+unsigned int loadTexture(const char* path, bool gammaCorrection = false)
 {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -135,22 +157,25 @@ unsigned int loadTexture(const char* path)
 	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
 	if (data)
 	{
-		GLenum format;
+		GLenum dataFormat, internalFormat;
 		if (nrComponents == 1)
 		{
-			format = GL_RED;
+			internalFormat = dataFormat = GL_RED;
 		}
 		else if (nrComponents == 3)
 		{
-			format = GL_RGB;
+		    internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
+			dataFormat = GL_RGB;
 		}
 		else if (nrComponents == 4)
 		{
-			format = GL_RGBA;
+		    internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
+			dataFormat = GL_RGBA;
 		}
 
 		glBindTexture(GL_TEXTURE_2D, textureID);
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat,
+            GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -218,11 +243,21 @@ int drawWithGeometryShader(GLFWwindow* window);
 int drawNormal(GLFWwindow* window);
 int drawInstance(GLFWwindow* window);
 int drawWithAntiAliasing(GLFWwindow* window);
+int drawWithGammaCorrection(GLFWwindow* window);
 
 int main()
 {
-	int drawEnum;
-	cin >> drawEnum;
+	for(int i = 0; i < DrawMethodStr.size(); i++)
+    {
+        if (i % 2 == 0)
+        {
+            cout << endl;
+        }
+	    cout << i << " :  " << DrawMethodStr[i] << "   ";
+    }
+    
+    int drawEnum;
+    cin >> drawEnum;
 
 //	if(drawEnum == (int)DrawWithAntiAliasing)
 //    {
@@ -231,37 +266,35 @@ int main()
 //	    //开启多重采样（默认已启用）
 //	    glEnable(GL_MULTISAMPLE);
 //    }
-
-	//???????????glfw?????????????????????????
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
-	//???????????
-	GLFWwindow* window = glfwCreateWindow(SCR_WindowWidth, SCR_WindowHeight, "LearnOpenGL",
-		NULL, NULL);
-	if (window == NULL)
-	{
-		cout << "Failed to create GLFW window" << endl;
-		glfwTerminate();
-		return -1;
-	}
-	//?????????????????????????????
-	glfwMakeContextCurrent(window);
-
-	//????????????????????????????????
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-	{
-		cout << "Failed to initialize GLAD" << endl;
-		return -1;
-	}
-
-
-
+    
+    //???????????glfw?????????????????????????
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    
+    //???????????
+    GLFWwindow *window = glfwCreateWindow(SCR_WindowWidth, SCR_WindowHeight, "LearnOpenGL",
+                                          NULL, NULL);
+    if (window == NULL)
+    {
+        cout << "Failed to create GLFW window" << endl;
+        glfwTerminate();
+        return -1;
+    }
+    //?????????????????????????????
+    glfwMakeContextCurrent(window);
+    
+    //????????????????????????????????
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress))
+    {
+        cout << "Failed to initialize GLAD" << endl;
+        return -1;
+    }
+    
 	switch (drawEnum)
 	{
 	case (int)DrawTriangleOrRetangle:
@@ -296,6 +329,8 @@ int main()
         return drawInstance(window);
     case (int)DrawWithAntiAliasing:
         return drawWithAntiAliasing(window);
+    case (int)DrawWithGammaCorrection:
+        return drawWithGammaCorrection(window);
 	default:
 		return drawNothin(window);
 	}
@@ -2848,6 +2883,115 @@ int drawWithAntiAliasing(GLFWwindow* window)
         glfwPollEvents();
     }
 
+    glfwTerminate();
+    return 0;
+}
+
+//Gamma校正
+int drawWithGammaCorrection(GLFWwindow* window)
+{
+    bool gammaEnabled = false;
+    bool gammaKeyPressed = false;
+    
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    CustomShader myShader("../openGLearn/ShaderSource/GammaCorrection.vs",
+                          "../openGLearn/ShaderSource/GammaCorrection.fs");
+    float planeVertices[] =
+    {
+         // positions           // normals          // texcoords
+         10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+        -10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+        -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+
+         10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+        -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+         10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+    };
+
+    unsigned int planeVAO, planeVBO;
+    glGenVertexArrays(1, &planeVAO);
+    glGenBuffers(1, &planeVBO);
+    glBindVertexArray(planeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glBindVertexArray(0);
+
+    unsigned int texture = loadTexture("../openGLearn/Res/Texture/wood.png",
+            false);
+    unsigned int gammaTexture = loadTexture("../openGLearn/Res/Texture/wood.png",
+            true);
+
+    myShader.use();
+    myShader.setInt("floorTexture", 0);
+    vec3 lightPositions[] =
+    {
+        vec3(-3.0f, 0.0f, 0.0f),
+        vec3(-1.0f, 0.0f, 0.0f),
+        vec3(1.0f, 0.0f, 0.0f),
+        vec3(3.0f, 0.0f, 0.0f),
+    };
+    vec3 lightColors[] =
+    {
+        vec3(0.25f),
+        vec3(0.50f),
+        vec3(0.75f),
+        vec3(1.00f),
+    };
+  
+    while(!glfwWindowShouldClose(window))
+    {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+        
+        processInput(window);
+    
+        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && !gammaKeyPressed)
+        {
+            gammaEnabled = !gammaEnabled;
+            cout << (gammaEnabled ? "Gamma enabled" : "Gamma disabled") << endl;
+            gammaKeyPressed = true;
+        }
+        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE)
+        {
+            gammaKeyPressed = false;
+        }
+        
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        myShader.use();
+        mat4 projection = perspective(radians(camera.Zoom), (float)SCR_WindowWidth
+            / (float)SCR_WindowHeight, 0.1f, 100.0f);
+        mat4 view = camera.GetViewMatrix();
+        myShader.setMat4("projection", projection);
+        myShader.setMat4("view", view);
+        glUniform3fv(glGetUniformLocation(myShader.ID, "lightPositions"), 4, &lightPositions[0][0]);
+        glUniform3fv(glGetUniformLocation(myShader.ID, "lightColors"), 4, &lightColors[0][0]);
+        myShader.setVec3("viewPos", camera.Position);
+        myShader.setInt("gamma", gammaEnabled);
+        
+        glBindVertexArray(planeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gammaEnabled ? gammaTexture : texture);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+    
+    glDeleteVertexArrays(1, &planeVAO);
+    glDeleteBuffers(1, &planeVBO);
+    
     glfwTerminate();
     return 0;
 }

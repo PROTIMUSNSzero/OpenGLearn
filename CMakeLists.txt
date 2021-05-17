@@ -4,9 +4,11 @@ project(OpenGLearn)
 set(CMAKE_CXX_STANDARD 14)
 
 set(INC_DIR ./head&lib/include)
+set(LIB_DIR ./head&lib/lib)
 
 include_directories(openGLearn)
 include_directories(${INC_DIR})
+include_directories(${LIB_DIR})
 
 add_executable(OpenGLearn
         openGLearn/C2_UniformFieldAndDataStruct.cpp

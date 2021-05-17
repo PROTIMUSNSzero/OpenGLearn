@@ -11,4 +11,4 @@ Clion
         set(INC_DIR ./head&lib/include)  include_directories(${INC_DIR})  //include及其子目录路径
         target_link_libraries(OpenGLearn glfw3.lib glfw3dll.lib assimp-vc140-mt.lib)  lib连接
 
-在Edit Configuration->Environment variables中设置包含dll的目录(Path=[全局路径])
+在Edit Configuration->Environment variables中设置包含dll的目录(PATH=全局路径)

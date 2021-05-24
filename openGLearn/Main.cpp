@@ -45,6 +45,7 @@ enum DrawMethodEnum
 	DrawWithAntiAliasing = 15,
 	DrawWithGammaCorrection = 16,
 	DrawShadowMapping = 17,
+    DrawOmnidirectionalShadow = 18,
 };
 
 vector<string> DrawMethodStr
@@ -67,6 +68,7 @@ vector<string> DrawMethodStr
     "DrawWithAntiAliasing       ",
     "DrawWithGammaCorrection    ",
     "DrawShadowMapping          ",
+    "DrawOmnidirectionalShadow  "
 };
 
 //#define DRAW_TRIANGLE  //绘制三角形
@@ -247,10 +249,13 @@ int drawInstance(GLFWwindow* window);
 int drawWithAntiAliasing(GLFWwindow* window);
 int drawWithGammaCorrection(GLFWwindow* window);
 int drawShadowMapping(GLFWwindow* window);
+int drawOmnidirectionalShadow(GLFWwindow* window);
 
 void renderScene(CustomShader &shader, int planeVAO, unsigned int &cubeVAO, unsigned int &cubeVBO);
 void renderCube(unsigned int &cubeVAO, unsigned int &cubeVBO);
 void renderQuad(unsigned int &quadVAO, unsigned int &quadVBO);
+void renderPointLightScene(CustomShader &shader, GLuint &cubeVAO, GLuint &cubeVBO);
+void renderPointLightCube(GLuint &cubeVAO, GLuint &cubeVBO);
 
 int main()
 {
@@ -340,6 +345,8 @@ int main()
         return drawWithGammaCorrection(window);
     case (int)DrawShadowMapping:
         return drawShadowMapping(window);
+    case (int)DrawOmnidirectionalShadow:
+        return drawOmnidirectionalShadow(window);
 	default:
 		return drawNothin(window);
 	}
@@ -3077,7 +3084,7 @@ int drawShadowMapping(GLFWwindow* window)
     GLfloat borderColor[] = {1.0, 1.0, 1.0, 1.0};
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
     
-    //帧缓冲只用做保留深度信息，不做显示输出用途
+    //帧缓冲只用做保留深度信息，不会渲染到颜色缓冲里
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
     glDrawBuffer(GL_NONE);
@@ -3300,6 +3307,257 @@ void renderQuad(unsigned int &quadVAO, unsigned int &quadVBO)
     }
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+}
+
+//点光源阴影
+int drawOmnidirectionalShadow(GLFWwindow* window)
+{
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    CustomShader myShader("../openGLearn/ShaderSource/PointLightShadow.vs",
+        "../openGLearn/ShaderSource/PointLightShadow.fs");
+    CustomShader depthShader("../openGLearn/ShaderSource/PointLightShadowDepth.vs",
+        "../openGLearn/ShaderSource/PointLightShadowDepth.fs",
+        "../openGLearn/ShaderSource/PointLightShadowDepth.gs");
+    
+    unsigned int woodTex = loadTexture("../openGLearn/Res/Texture/wood.png");
+    
+    bool shadows = true;
+    bool shadowsKeyPressed = false;
+    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    unsigned int depthMapFBO;
+    glGenFramebuffers(1, &depthMapFBO);
+    //生成立方体贴图以存储阴影深度
+    unsigned int depthCubemap;
+    glGenTextures(1, &depthCubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+    for(int i = 0; i < 6; i++)
+    {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH,
+            SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    unsigned int cubeVAO = 0, cubeVBO = 0;
+    
+    myShader.use();
+    myShader.setInt("diffuseTexture", 0);
+    myShader.setInt("depthMap", 1);
+    
+    vec3 lightPos(0.0f, 0.0f, 0.0f);
+    
+    while (!glfwWindowShouldClose(window))
+    {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+        
+        processInput(window);
+    
+        //开关阴影
+        if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS && !shadowsKeyPressed)
+        {
+            shadows = !shadows;
+            shadowsKeyPressed = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_RELEASE)
+        {
+            shadowsKeyPressed = false;
+        }
+        
+        //光照移动
+        lightPos.z = sin(glfwGetTime() * 0.5) * 3.0;
+        
+        float near = 1.0f, far = 25.0f;
+        //阴影贴图渲染在6个正方形面上（正方体），fov为90度，宽高相同，以保证相邻的面在边缘对其
+        mat4 shadowProj = perspective(radians(90.0f),
+            (float) SHADOW_WIDTH / (float) SHADOW_HEIGHT, near, far);
+        vector<mat4> shadowTransforms;
+        //面向6个面的转换矩阵，包含视图空间变换矩阵与光源空间（透视投影）变换矩阵
+        shadowTransforms.push_back(shadowProj * lookAt(lightPos,
+            lightPos + vec3( 1.0,  0.0,  0.0), vec3(0.0, -1.0,  0.0)));
+        shadowTransforms.push_back(shadowProj * lookAt(lightPos,
+            lightPos + vec3(-1.0,  0.0,  0.0), vec3(0.0, -1.0,  0.0)));
+        shadowTransforms.push_back(shadowProj * lookAt(lightPos,
+            lightPos + vec3( 0.0,  1.0,  0.0), vec3(0.0,  0.0,  1.0)));
+        shadowTransforms.push_back(shadowProj * lookAt(lightPos,
+            lightPos + vec3( 0.0, -1.0,  0.0), vec3(0.0,  0.0, -1.0)));
+        shadowTransforms.push_back(shadowProj * lookAt(lightPos,
+            lightPos + vec3( 0.0,  0.0,  1.0), vec3(0.0, -1.0,  0.0)));
+        shadowTransforms.push_back(shadowProj * lookAt(lightPos,
+            lightPos + vec3( 0.0,  0.0, -1.0), vec3(0.0, -1.0,  0.0)));
+    
+        //渲染场景并保存阴影深度
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        depthShader.use();
+        for(unsigned int i = 0; i < 6; i++)
+        {
+            depthShader.setMat4("shadowMatrices[" + to_string(i) + "]", shadowTransforms[i]);
+        }
+        depthShader.setFloat("far_plane", far);
+        depthShader.setVec3("lightPos", lightPos);
+        renderPointLightScene(depthShader, cubeVAO, cubeVBO);
+        
+        //渲染真正场景
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, SCR_WindowWidth, SCR_WindowHeight);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        myShader.use();
+        
+        mat4 projection, view;
+        mat4 lightSpaceMatrix;
+        projection = perspective(radians(camera.Zoom),
+            (float)SCR_WindowWidth / (float)SCR_WindowHeight, 0.1f, 100.0f);
+        view = camera.GetViewMatrix();
+        myShader.setMat4("projection", projection);
+        myShader.setMat4("view", view);
+        myShader.setVec3("lightPos", lightPos);
+        myShader.setVec3("viewPos", camera.Position);
+        myShader.setInt("shadows", shadows);
+        myShader.setFloat("far_plane", far);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, woodTex);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+        renderPointLightScene(myShader, cubeVAO, cubeVBO);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+    
+    glfwTerminate();
+    return 0;
+}
+
+//点光源阴影-渲染场景
+void renderPointLightScene(CustomShader &shader, unsigned int &cubeVAO, unsigned int &cubeVBO)
+{
+    mat4 model = mat4(1.0f);
+    model = scale(model, vec3(8.0f));
+    shader.setMat4("model", model);
+    glDisable(GL_CULL_FACE);
+    shader.setInt("reverse_normals", 1);
+    renderPointLightCube(cubeVAO, cubeVBO);
+    shader.setInt("reverse_normals", 0);
+    glEnable(GL_CULL_FACE);
+    
+    model = mat4(1.0f);
+    model = translate(model, vec3(3.0f, -3.5f, 0.0f));
+    model = scale(model, vec3(0.5f));
+    shader.setMat4("model", model);
+    renderPointLightCube(cubeVAO, cubeVBO);
+    model = mat4(1.0f);
+    model = translate(model, vec3(2.0f, 3.0f, 1.0f));
+    model = scale(model, vec3(0.75f));
+    shader.setMat4("model", model);
+    renderPointLightCube(cubeVAO, cubeVBO);
+    model = mat4(1.0f);
+    model = translate(model, vec3(-3.0f, -1.0f, 0.0f));
+    model = scale(model, vec3(0.5f));
+    shader.setMat4("model", model);
+    renderPointLightCube(cubeVAO, cubeVBO);
+    model = mat4(1.0f);
+    model = translate(model, vec3(-1.5f, 1.0f, 1.5f));
+    model = scale(model, vec3(0.5f));
+    shader.setMat4("model", model);
+    renderPointLightCube(cubeVAO, cubeVBO);
+    model = mat4(1.0f);
+    model = translate(model, vec3(-1.5f, 2.0f, -3.0f));
+    model = rotate(model, radians(60.0f),
+        normalize(vec3(1.0f, 0.0f, 1.0f)));
+    model = scale(model, vec3(0.75f));
+    shader.setMat4("model", model);
+    renderPointLightCube(cubeVAO, cubeVBO);
+}
+
+//点光源阴影-渲染立方体
+void renderPointLightCube(unsigned int &cubeVAO, unsigned int &cubeVBO)
+{
+    if (cubeVAO == 0)
+    {
+        float vertices[] = {
+            // Back face
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // Bottom-left
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
+            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, // bottom-right
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,  // top-right
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,  // bottom-left
+            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,// top-left
+            // Front face
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,  // bottom-right
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,  // top-right
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top-right
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,  // top-left
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom-left
+            // Left face
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
+            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-left
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // bottom-left
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-left
+            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // bottom-right
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
+            // Right face
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-left
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-right
+            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-right
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // bottom-right
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // top-left
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom-left
+            // Bottom face
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
+            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, // top-left
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,// bottom-left
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom-left
+            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, // bottom-right
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
+            // Top face
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,// top-left
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
+            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, // top-right
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,// top-left
+            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f // bottom-left
+        };
+        glGenVertexArrays(1, &cubeVAO);
+        glGenBuffers(1, &cubeVBO);
+       
+        glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+      
+        glBindVertexArray(cubeVAO);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+            8 * sizeof(float), (void *) (3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+            8 * sizeof(float), (void *) (6 * sizeof(float)));
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+    
+    glBindVertexArray(cubeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 }
 

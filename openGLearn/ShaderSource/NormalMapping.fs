@@ -19,7 +19,7 @@ uniform vec3 viewPos;
 void main()
 {
     vec3 normal = texture(normalMap, fs_in.TexCoords).rgb;
-    //将法线向量采样值从[0,1]转到[-1,1]，贴图中存储的值为[0，1]
+    //将法线向量采样值从[0,1]转到[-1,1]，贴图中存储的值为[0,1]
     normal = normalize(normal * 2.0 - 1.0);
     vec3 color = texture(diffuseMap, fs_in.TexCoords).rgb;
     vec3 ambient = 0.1 * color;

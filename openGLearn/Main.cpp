@@ -48,6 +48,8 @@ enum DrawMethodEnum
     DrawOmnidirectionalShadow = 18,
     DrawWithNormalMapping = 19,
     DrawWithParallaxMapping = 20,
+    DrawWithHDR = 21,
+    DrawBloom = 22,
 };
 
 vector<string> DrawMethodStr
@@ -73,6 +75,8 @@ vector<string> DrawMethodStr
     "DrawOmnidirectionalShadow  ",
     "DrawWithNormalMapping      ",
     "DrawWithParallaxMapping    ",
+    "DrawWithHDR                ",
+    "DrawBloom                  ",
 };
 
 //#define DRAW_TRIANGLE  //绘制三角形
@@ -256,12 +260,18 @@ int drawShadowMapping(GLFWwindow* window);
 int drawOmnidirectionalShadow(GLFWwindow* window);
 int drawWithNormalMapping(GLFWwindow* window);
 int drawWithParallaxMapping(GLFWwindow* window);
+int drawWithHDR(GLFWwindow* window);
+int drawBloom(GLFWwindow* window);
 
 void renderScene(CustomShader &shader, int planeVAO, unsigned int &cubeVAO, unsigned int &cubeVBO);
 void renderCube(unsigned int &cubeVAO, unsigned int &cubeVBO);
 void renderQuad(unsigned int &quadVAO, unsigned int &quadVBO);
 void renderPointLightScene(CustomShader &shader, GLuint &cubeVAO, GLuint &cubeVBO);
 void renderPointLightCube(GLuint &cubeVAO, GLuint &cubeVBO);
+void renderHDRCube(unsigned int &cubeVAO, unsigned int &cubeVBO);
+void renderHDRQuad(unsigned int &quadVAO, unsigned int &quadVBO);
+void renderBloomCube(unsigned int &cubeVAO, unsigned int &cubeVBO);
+void renderBloomQuad(unsigned int &quadVAo, unsigned int &quadVBO);
 
 int main()
 {
@@ -357,6 +367,10 @@ int main()
         drawWithNormalMapping(window);
     case (int)DrawWithParallaxMapping:
         drawWithParallaxMapping(window);
+    case (int)DrawWithHDR:
+        drawWithHDR(window);
+    case (int)DrawBloom:
+        drawBloom(window);
 	default:
 		return drawNothin(window);
 	}
@@ -1709,11 +1723,11 @@ int drawWithBlending(GLFWwindow* window)
 		glBindVertexArray(cubeVAO);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, cubeTexture);
-		model = glm::translate(model, glm::vec3(-0.4f, 0.0f, -1.0f));
+		model = translate(model, vec3(-0.4f, 0.0f, -1.0f));
 		myShader.setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.6f, 0.0f, 0.0f));
+		model = mat4(1.0f);
+		model = translate(model, vec3(0.6f, 0.0f, 0.0f));
 		myShader.setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 #endif
@@ -1850,7 +1864,7 @@ int drawWithCulling(GLFWwindow* window)
 		glBindVertexArray(cubeVAO);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, cubeTexture);
-		model = translate(model, glm::vec3(-0.4f, 0.0f, -1.0f));
+		model = translate(model, vec3(-0.4f, 0.0f, -1.0f));
 		model = rotate(model, radians(45.0f), vec3(0.0f, 1.0f, 0.0f));
 		myShader.setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -2428,8 +2442,8 @@ int drawWithAdvancedData(GLFWwindow* window)
     //第2参数为绑定点；第3参数为缓冲对象；第4参数为缓冲对象起始位置偏移量；第5参数为数据长度；
     glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(mat4));
 
-    mat4 projection = perspective(45.0f, (float)SCR_WindowWidth / (float)SCR_WindowHeight,
-        0.1f, 100.0f);
+    mat4 projection = perspective(45.0f,
+        (float)SCR_WindowWidth / (float)SCR_WindowHeight,0.1f, 100.0f);
     glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
     //设置部分缓冲数据。第2参数为对其偏移量；第3参数为基准对齐量；
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(mat4), value_ptr(projection));
@@ -3802,9 +3816,9 @@ int drawWithParallaxMapping(GLFWwindow* window)
     
     float quadVertices[] =
     {
-        // Positions            // normal         // TexCoords  // Tangent                          // Bitangent
+        // Positions            // normal         // TexCoords  // Tangent
         pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent1.x, tangent1.y,
-        // bitangent
+        // Bitangent
         tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
         pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y,
         tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
@@ -3891,6 +3905,591 @@ int drawWithParallaxMapping(GLFWwindow* window)
     
     glfwTerminate();
     return 0;
+}
+
+//HDR
+int drawWithHDR(GLFWwindow* window)
+{
+    bool hdr = true;
+    bool hdrKeyPressed = false;
+    float exposure = 1.0f;
+    
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
+    glEnable(GL_DEPTH_TEST);
+    
+    CustomShader myShader("../openGLearn/ShaderSource/HDRScene.vs",
+                          "../openGLearn/ShaderSource/HDRScene.fs");
+    CustomShader hdrShader("../openGLearn/ShaderSource/HDR.vs",
+                           "../openGLearn/ShaderSource/HDR.fs");
+    
+    unsigned int woodTexture = loadTexture("../openGLearn/Res/Texture/wood.png",
+        true);
+    // note that we're loading the texture as an SRGB texture
+    
+    unsigned int hdrFBO;
+    glGenFramebuffers(1, &hdrFBO);
+    unsigned int colorBuffer;
+    glGenTextures(1, &colorBuffer);
+    glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    //颜色缓冲使用浮点帧缓冲格式（GL_RGB16F，GL_RGBA_16F，GL_RGB32F，GL_RGBA32F），可存储超过0.0到1.0范围的值
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WindowWidth, SCR_WindowHeight, 0, GL_RGBA,
+        GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    unsigned int rboDepth;
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WindowWidth, SCR_WindowHeight);
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    // lighting info
+    // positions
+    std::vector<vec3> lightPositions;
+    lightPositions.push_back(vec3(0.0f, 0.0f, 49.5f)); // back light
+    lightPositions.push_back(vec3(-1.4f, -1.9f, 9.0f));
+    lightPositions.push_back(vec3(0.0f, -1.8f, 4.0f));
+    lightPositions.push_back(vec3(0.8f, -1.7f, 6.0f));
+    // colors
+    std::vector<vec3> lightColors;
+    lightColors.push_back(vec3(200.0f, 200.0f, 200.0f));
+    lightColors.push_back(vec3(0.1f, 0.0f, 0.0f));
+    lightColors.push_back(vec3(0.0f, 0.0f, 0.2f));
+    lightColors.push_back(vec3(0.0f, 0.1f, 0.0f));
+    
+    myShader.use();
+    myShader.setInt("diffuseTexture", 0);
+    hdrShader.use();
+    hdrShader.setInt("hdrBuffer", 0);
+    
+    unsigned int quadVAO = 0, cubeVAO = 0;
+    unsigned int quadVBO, cubeVBO;
+    
+    while (!glfwWindowShouldClose(window))
+    {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+        
+        processInput(window);
+        if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
+        {
+            hdr = false;
+        }
+        else
+        {
+            hdr = true;
+        }
+    
+        //曝光度
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+        {
+            if (exposure > 0.0f)
+                exposure -= 0.001f;
+            else
+                exposure = 0.0f;
+            
+            cout << "exposure: " << exposure << endl;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        {
+            exposure += 0.001f;
+    
+            cout << "exposure: " << exposure << endl;
+        }
+        
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        //渲染场景至浮点帧缓冲中以保留颜色超出[0.0，1.0]的部分
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        mat4 projection = perspective(radians(camera.Zoom),
+            (GLfloat) SCR_WindowWidth / (GLfloat) SCR_WindowHeight, 0.1f, 100.0f);
+        mat4 view = camera.GetViewMatrix();
+        myShader.use();
+        myShader.setMat4("projection", projection);
+        myShader.setMat4("view", view);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, woodTexture);
+        
+        for (unsigned int i = 0; i < lightPositions.size(); i++)
+        {
+            myShader.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
+            myShader.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
+        }
+        myShader.setVec3("viewPos", camera.Position);
+        
+        mat4 model = mat4(1.0f);
+        model = translate(model, vec3(0.0f, 0.0f, 25.0));
+        model = scale(model, vec3(2.5f, 2.5f, 27.5f));
+        myShader.setMat4("model", model);
+        myShader.setInt("inverse_normals", true);
+        renderHDRCube(cubeVAO, cubeVBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
+        //浮点颜色缓冲的内容渲染至默认帧缓冲中，颜色值调回[0.0，1.0]范围内
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        hdrShader.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, colorBuffer);
+        hdrShader.setInt("hdr", hdr);
+        hdrShader.setFloat("exposure", exposure);
+        renderHDRQuad(quadVAO, quadVBO);
+        
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+    
+    glfwTerminate();
+    return 0;
+}
+
+//hdr
+void renderHDRCube(unsigned int &cubeVAO, unsigned int &cubeVBO)
+{
+    if (cubeVAO == 0)
+    {
+        float vertices[] =
+        {
+            // back face
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+             1.0f,  1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
+             1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, // bottom-right
+             1.0f,  1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+            -1.0f,  1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, // top-left
+            // front face
+            -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
+             1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, // bottom-right
+             1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top-right
+             1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top-right
+            -1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, // top-left
+            -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
+            // left face
+            -1.0f,  1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
+            -1.0f,  1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-left
+            -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-left
+            -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-left
+            -1.0f, -1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom-right
+            -1.0f,  1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
+            // right face
+             1.0f,  1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-left
+             1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-right
+             1.0f,  1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-right
+             1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-right
+             1.0f,  1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-left
+             1.0f, -1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom-left
+            // bottom face
+            -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
+             1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, // top-left
+             1.0f, -1.0f,  1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom-left
+             1.0f, -1.0f,  1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom-left
+            -1.0f, -1.0f,  1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, // bottom-right
+            -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
+            // top face
+            -1.0f,  1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top-left
+             1.0f,  1.0f,  1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
+             1.0f,  1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, // top-right
+             1.0f,  1.0f,  1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
+            -1.0f,  1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top-left
+            -1.0f,  1.0f,  1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f  // bottom-left
+        };
+        glGenVertexArrays(1, &cubeVAO);
+        glGenBuffers(1, &cubeVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        glBindVertexArray(cubeVAO);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+            (void *) (3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+            (void *)(6 * sizeof(float)));
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+    
+    glBindVertexArray(cubeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+}
+
+void renderHDRQuad(unsigned int &quadVAO, unsigned int &quadVBO)
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] =
+        {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+            (void *) (3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+}
+
+//泛光渲染
+int drawBloom(GLFWwindow* window)
+{
+    bool bloom = true;
+    float exposure = 1.0f;
+    
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
+    glEnable(GL_DEPTH_TEST);
+    
+    CustomShader myShader("../openGLearn/ShaderSource/Bloom.vs",
+                          "../openGLearn/ShaderSource/Bloom.fs");
+    CustomShader lightShader("../openGLearn/ShaderSource/Bloom.vs",
+                          "../openGLearn/ShaderSource/LightBox.fs");
+    CustomShader blurShader("../openGLearn/ShaderSource/Blur.vs",
+                          "../openGLearn/ShaderSource/Blur.fs");
+    CustomShader finalBloomShader("../openGLearn/ShaderSource/Blur.vs",
+                          "../openGLearn/ShaderSource/FinalBloom.fs");
+    
+    unsigned int woodTexture = loadTexture("../openGLearn/Res/Texture/wood.png",
+        true);
+    unsigned int containerTexture = loadTexture("../openGLearn/Res/Texture/container2.png",
+        true);
+    unsigned int hdrFBO;
+    glGenFramebuffers(1, &hdrFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+    unsigned int colorBuffers[2];
+    glGenTextures(2, colorBuffers);
+    for(unsigned int i = 0; i < 2; i++)
+    {
+        glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WindowWidth, SCR_WindowHeight, 0, GL_RGBA,
+            GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D,
+            colorBuffers[i], 0);
+    }
+    
+    unsigned int rboDepth;
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WindowWidth, SCR_WindowHeight);
+    glFramebufferRenderbuffer(GL_RENDERBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    
+    unsigned int attachments[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, attachments);
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        cout << "Framebuffer not completed!" << endl;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    unsigned int pingpongFBO[2];
+    unsigned int pingpongColorbuffers[2];
+    glGenFramebuffers(2, pingpongFBO);
+    glGenTextures(2, pingpongColorbuffers);
+    for(unsigned int i = 0; i < 2; i++)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WindowWidth, SCR_WindowHeight, 0, GL_RGBA,
+            GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+            pingpongColorbuffers[i], 0);
+        if(glad_glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        {
+            cout << "Framebuffer not completed!" << endl;
+        }
+    }
+    
+    vector<vec3> lightPositions;
+    lightPositions.push_back(vec3( 0.0f, 0.5f,  1.5f));
+    lightPositions.push_back(vec3(-4.0f, 0.5f, -3.0f));
+    lightPositions.push_back(vec3( 3.0f, 0.5f,  1.0f));
+    lightPositions.push_back(vec3(-0.8f, 2.4f, -1.0f));
+    
+    vector<vec3> lightColors;
+    lightColors.push_back(vec3( 5.0f, 5.0f,  5.0f));
+    lightColors.push_back(vec3(10.0f, 0.0f,  0.0f));
+    lightColors.push_back(vec3( 0.0f, 0.0f, 15.0f));
+    lightColors.push_back(vec3( 0.0f, 5.0f,  0.0f));
+    
+    myShader.use();
+    myShader.setInt("diffuseTexture", 0);
+    blurShader.use();
+    blurShader.setInt("image", 0);
+    finalBloomShader.use();
+    finalBloomShader.setInt("scene", 0);
+    finalBloomShader.setInt("bloomBlur", 1);
+    
+    while(!glfwWindowShouldClose(window))
+    {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+        
+        processInput(window);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+        {
+            if (exposure > 0.0f)
+                exposure -= 0.001f;
+            else
+                exposure = 0.0f;
+            
+            cout << "exposure: " << exposure << endl;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        {
+            exposure += 0.001f;
+    
+            cout << "exposure: " << exposure << endl;
+        }
+        
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        mat4 projection = perspective(radians(camera.Zoom),
+            (float)SCR_WindowWidth / (float)SCR_WindowHeight, 0.1f, 100.0f);
+        mat4 view = camera.GetViewMatrix();
+        mat4 model = mat4(1.0f);
+        myShader.use();
+        myShader.setMat4("projection", projection);
+        myShader.setMat4("view", view);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, woodTexture);
+        
+        for(unsigned int i = 0; i < lightPositions.size(); i++)
+        {
+            myShader.setVec3("lights[" + to_string(i) + "].Position", lightPositions[i]);
+            myShader.setVec3("lights[" + to_string(i) + "].Color", lightColors[i]);
+        }
+        myShader.setVec3("viewPos", camera.Position);
+    
+        unsigned int cubeVAO = 0, cubeVBO = 0;
+        unsigned int quadVAO = 0, quadVBO = 0;
+        
+        model = mat4(1.0f);
+        model = translate(model, vec3(0.0f, -1.0f, 0.0f));
+        model = scale(model, vec3(12.5f, 0.5f, 12.5f));
+        myShader.setMat4("model", model);
+        renderBloomCube(cubeVAO, cubeVBO);
+        glBindTexture(GL_TEXTURE_2D, containerTexture);
+        model = mat4(1.0f);
+        model = translate(model, vec3(0.5f));
+        myShader.setMat4("model", model);
+        renderBloomCube(cubeVAO, cubeVBO);
+        model = mat4(1.0f);
+        model = translate(model, vec3(2.0f, 0.0f, 1.0));
+        model = scale(model, vec3(0.5f));
+        myShader.setMat4("model", model);
+        renderBloomCube(cubeVAO, cubeVBO);
+        model = mat4(1.0f);
+        model = translate(model, vec3(-1.0f, -1.0f, 2.0));
+        model = rotate(model, radians(60.0f),
+            normalize(vec3(1.0, 0.0, 1.0)));
+        myShader.setMat4("model", model);
+        renderBloomCube(cubeVAO, cubeVBO);
+        model = mat4(1.0f);
+        model = translate(model, vec3(0.0f, 2.7f, 4.0));
+        model = rotate(model, radians(23.0f),
+            normalize(vec3(1.0, 0.0, 1.0)));
+        model = scale(model, vec3(1.25));
+        myShader.setMat4("model", model);
+        renderBloomCube(cubeVAO, cubeVBO);
+        model = mat4(1.0f);
+        model = translate(model, vec3(-2.0f, 1.0f, -3.0));
+        model = rotate(model, radians(124.0f),
+            normalize(vec3(1.0, 0.0, 1.0)));
+        myShader.setMat4("model", model);
+        renderBloomCube(cubeVAO, cubeVBO);
+        model = mat4(1.0f);
+        model = translate(model, vec3(-3.0f, 0.0f, 0.0));
+        model = scale(model, vec3(0.5f));
+        myShader.setMat4("model", model);
+        renderBloomCube(cubeVAO, cubeVBO);
+        
+        lightShader.use();
+        lightShader.setMat4("projection", projection);
+        lightShader.setMat4("view", view);
+        
+        for(unsigned int i = 0; i < lightPositions.size(); i++)
+        {
+            model = mat4(1.0f);
+            model = translate(model, vec3(lightPositions[i]));
+            model = scale(model, vec3(0.25f));
+            lightShader.setMat4("model", model);
+            lightShader.setVec3("lightColor", lightColors[i]);
+            renderBloomCube(cubeVAO, cubeVBO);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
+        bool horizontal = true, first_iteration = true;
+        unsigned int amount = 10;
+        blurShader.use();
+        for(unsigned int i = 0; i < amount; i++)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+            blurShader.setInt("horizontal", horizontal);
+            glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1]
+            : pingpongColorbuffers[!horizontal]);
+            renderBloomQuad(quadVAO, quadVBO);
+            horizontal = !horizontal;
+            if(first_iteration)
+            {
+                first_iteration = false;
+            }
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        finalBloomShader.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]);
+        finalBloomShader.setInt("bloom", bloom);
+        finalBloomShader.setFloat("exposure", exposure);
+        renderBloomQuad(quadVAO, quadVBO);
+        
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+    
+    glfwTerminate();
+    return 0;
+}
+
+void renderBloomCube(unsigned int &cubeVAO, unsigned int &cubeVBO)
+{
+    if (cubeVAO == 0)
+    {
+        float vertices[] = {
+            // back face
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+            1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
+            1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, // bottom-right
+            1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+            -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, // top-left
+            // front face
+            -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
+            1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, // bottom-right
+            1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top-right
+            1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top-right
+            -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, // top-left
+            -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
+            // left face
+            -1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
+            -1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-left
+            -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-left
+            -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-left
+            -1.0f, -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom-right
+            -1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
+            // right face
+            1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-left
+            1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-right
+            1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-right
+            1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-right
+            1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-left
+            1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom-left
+            // bottom face
+            -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
+            1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, // top-left
+            1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom-left
+            1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom-left
+            -1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, // bottom-right
+            -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
+            // top face
+            -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top-left
+            1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
+            1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, // top-right
+            1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
+            -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top-left
+            -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f  // bottom-left
+        };
+        glGenVertexArrays(1, &cubeVAO);
+        glGenBuffers(1, &cubeVBO);
+        // fill buffer
+        glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        // link vertex attributes
+        glBindVertexArray(cubeVAO);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+            (void *) (3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+            (void *) (6 * sizeof(float)));
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+    // render Cube
+    glBindVertexArray(cubeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+}
+
+void renderBloomQuad(unsigned int &quadVAO, unsigned int &quadVBO)
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] =
+        {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+            (void *) (3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
 }
 
 

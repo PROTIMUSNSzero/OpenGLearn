@@ -3,7 +3,7 @@
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;
 
-in VS_out
+in VS_OUT
 {
     vec3 FragPos;
     vec3 Normal;
@@ -37,7 +37,7 @@ void main()
         lighting += result;
     }
     vec3 result = ambient + lighting;
-    float brightness = dot(result, vec3(0.2, 0.7, 0.7));
+    float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
     if(brightness > 1.0)
     {
         BrightColor = vec4(result, 1.0);

@@ -4199,7 +4199,7 @@ int drawBloom(GLFWwindow* window)
     glGenRenderbuffers(1, &rboDepth);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WindowWidth, SCR_WindowHeight);
-    glFramebufferRenderbuffer(GL_RENDERBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
     
     unsigned int attachments[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
     glDrawBuffers(2, attachments);
@@ -4251,6 +4251,9 @@ int drawBloom(GLFWwindow* window)
     finalBloomShader.setInt("scene", 0);
     finalBloomShader.setInt("bloomBlur", 1);
     
+    unsigned int cubeVAO = 0, cubeVBO = 0;
+    unsigned int quadVAO = 0, quadVBO = 0;
+    
     while(!glfwWindowShouldClose(window))
     {
         float currentFrame = glfwGetTime();
@@ -4296,16 +4299,15 @@ int drawBloom(GLFWwindow* window)
             myShader.setVec3("lights[" + to_string(i) + "].Color", lightColors[i]);
         }
         myShader.setVec3("viewPos", camera.Position);
-    
-        unsigned int cubeVAO = 0, cubeVBO = 0;
-        unsigned int quadVAO = 0, quadVBO = 0;
         
         model = mat4(1.0f);
         model = translate(model, vec3(0.0f, -1.0f, 0.0f));
         model = scale(model, vec3(12.5f, 0.5f, 12.5f));
         myShader.setMat4("model", model);
         renderBloomCube(cubeVAO, cubeVBO);
+        
         glBindTexture(GL_TEXTURE_2D, containerTexture);
+        
         model = mat4(1.0f);
         model = translate(model, vec3(0.5f));
         myShader.setMat4("model", model);
@@ -4395,7 +4397,8 @@ void renderBloomCube(unsigned int &cubeVAO, unsigned int &cubeVBO)
 {
     if (cubeVAO == 0)
     {
-        float vertices[] = {
+        float vertices[] =
+        {
             // back face
             -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
             1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
@@ -4439,6 +4442,7 @@ void renderBloomCube(unsigned int &cubeVAO, unsigned int &cubeVBO)
             -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top-left
             -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f  // bottom-left
         };
+        
         glGenVertexArrays(1, &cubeVAO);
         glGenBuffers(1, &cubeVBO);
         // fill buffer

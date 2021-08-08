@@ -105,8 +105,11 @@ const int DRAW_FRAMEBUFFER_TYPE = 4;
 #define DRAW_CUBEMAP_LIGHTING
 
 
+//窗口第1次显示以及每次改变窗口大小时都会调用
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
+    //设置（视口）渲染窗口的尺寸；参数：左下角位置，窗口宽高，每次改变窗口大小时都应调整视口，
+    //窗口第1次显示时也会调用
 	glViewport(0, 0, width, height);
 }
 
@@ -312,18 +315,25 @@ int main()
 //    }
     
     //初始化、配置GLFW
+    //初始化glfw库，使用glfw功能前必须初始化
     glfwInit();
+    //配置glfw，第1参数：选项；第2参数：选项值
+    //openGL版本号3.3，需保证版本在3.3或更高
+    //设置主版本号为3
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    //设置次版本号为3
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    //使用核心模式
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     
     //创建窗口对象
     GLFWwindow *window = glfwCreateWindow(SCR_WindowWidth, SCR_WindowHeight, "LearnOpenGL",
-                                          NULL, NULL);
+       NULL, NULL);
     if (window == NULL)
     {
         cout << "Failed to create GLFW window" << endl;
+        //销毁窗口，清除分配的资源，并将库设为未初始化状态，需重新初始化（glfwInit）才能调用glfw功能
         glfwTerminate();
         return -1;
     }
@@ -332,7 +342,9 @@ int main()
     
     //窗口尺寸改变的回调
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    
+
+    //初始化glad，调用opengl函数之前必须初始化，参数为加载系统相关的opengl函数指针地址的函数
+    //glfwGetProcAddress根据编译的系统定义了正确的函数
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress))
     {
         cout << "Failed to initialize GLAD" << endl;
@@ -400,7 +412,7 @@ int main()
 int drawNothin(GLFWwindow* window)
 {
 	glfwSetWindowShouldClose(window, true);
-	//销毁窗口，清除分配的资源，并将库设为未初始化状态，需重新初始化（glfwInit）才能调用glfw功能
+
 	glfwTerminate();
 	return 0;
 }
@@ -494,12 +506,12 @@ int drawTriangleOrRetangle(GLFWwindow *window)
 	//glBindBuffer(GL_ARRAY_BUFFER, 0);
 	//glBindVertexArray(0);
 
-	//??????
+	//glfw是否被要求退出
 	while (!glfwWindowShouldClose(window))
 	{
 		processInput(window);
 
-		//设置清除颜色缓冲后要重置的颜色，在调用glClear或glClearBuffer后重置为指定的颜色
+		//设置清除颜色缓冲后要重置的颜色，在调用glClear或glClearBuffer后颜色缓冲会重置为指定的颜色
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		//清除当前帧的指定缓冲
 		//GL_COLOR_BUFFER：颜色缓冲（重置颜色在glClearColor中设置）； GL_DEPTH_BUFFER：深度缓冲；
@@ -537,9 +549,9 @@ int drawTriangleOrRetangle(GLFWwindow *window)
 
 #endif
 
-		//检查事件触发、更新窗口状态，并调用对应回调
+		//检查事件触发（如用户输入）、更新窗口状态，并调用对应回调
 		glfwPollEvents();
-        //交换窗口的前后颜色缓冲，用来绘制并显示
+        //交换窗口的前后颜色缓冲，用来绘制并显示（双缓冲，后缓冲绘制完成后切换为前缓冲并显示在屏幕上）
 		glfwSwapBuffers(window);
 	}
 

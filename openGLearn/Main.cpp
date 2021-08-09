@@ -84,7 +84,7 @@ vector<string> DrawMethodStr
     "DrawSSAO                   ",
 };
 
-//#define DRAW_TRIANGLE  //绘制三角形
+#define DRAW_TRIANGLE  //绘制三角形
 //#define DRAW_WIREFRAME  //绘制线框
 //#define DRAW_IN_ORTHOGRAPHIC
 
@@ -166,6 +166,11 @@ void mouse_callback(GLFWwindow* window, double xPos, double yPos)
 void scroll_callback(GLFWwindow* window, double xOffset, double yOffset)
 {
 	camera.ProcessMouseScroll(yOffset);
+}
+
+void error_callback(int code, const char *description)
+{
+    cout << "Error: " << code << " " << description << endl;
 }
 
 unsigned int loadTexture(const char* path, bool gammaCorrection = false)
@@ -326,6 +331,8 @@ int main()
     //使用核心模式
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    //调试输出
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
     
     //创建窗口对象
     GLFWwindow *window = glfwCreateWindow(SCR_WindowWidth, SCR_WindowHeight, "LearnOpenGL",
@@ -350,6 +357,20 @@ int main()
         cout << "Failed to initialize GLAD" << endl;
         return -1;
     }
+    
+    //错误回调
+    glfwSetErrorCallback(error_callback);
+    
+    //glfw 主动获取错误
+    const char* description;
+    int code = glfwGetError(&description);
+    if(description)
+    {
+        cout << "Error: " << code << " " << description << endl;
+    }
+    
+    //glad 主动获取错误
+    cout << glGetError() << endl;
     
 	switch (drawEnum)
 	{
@@ -433,14 +454,14 @@ int drawTriangleOrRetangle(GLFWwindow *window)
 	float vertices[] =
 	{	//位置				//颜色
 		-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
+		 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+		 0.0f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
 	};
 	//矩形顶点
 	float rectVertices[] =
 	{
-		0.5f,  0.5f, 0.0f,
-		0.5f, -0.5f, 0.0f,
+		 0.5f,  0.5f, 0.0f,
+		 0.5f, -0.5f, 0.0f,
 		-0.5f, -0.5f, 0.0f,
 		-0.5f,  0.5f, 0.0f,
 	};

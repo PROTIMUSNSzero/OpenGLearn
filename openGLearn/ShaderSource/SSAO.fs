@@ -48,6 +48,9 @@ void main()
         float sampleDepth = texture(gPosition, offset.xy).z; // get depth value of kernel sample
 
         // range check & accumulate
+        // 防止采样点深度偏移太大，对环境遮蔽因子贡献过大，造成边缘光照过暗
+        // 深度差越大，对环境遮蔽因子的影响越小
+        // smoothstep()生成平滑插值
         float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
         occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
     }

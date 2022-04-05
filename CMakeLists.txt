@@ -22,21 +22,17 @@ include_directories(3rd_party/glad/include)
 include_directories(3rd_party/glm/glm)
 
 #config assimp
+option(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
 option(ASSIMP_BUILD_SAMPLES OFF)
 option(ASSIMP_BUILD_TESTS OFF)
 add_subdirectory(3rd_party/assimp)
-include_directories(3rd_party/assimp/include)
+include_directories(3rd_party/assimp/include/)
 
 set(SOURCE_FILES openGLearn/main.cpp ${GLAD_SRC})
 add_executable(openGLearn ${SOURCE_FILES})
 target_link_libraries(openGLearn ${LIBS})
 
-#set(INC_DIR ./head&lib/include)
-#set(LIB_DIR ./head&lib/lib)
-
 include_directories(openGLearn)
-#include_directories(${INC_DIR})
-#include_directories(${LIB_DIR})
 
 add_executable(OpenGLearn
         openGLearn/C2_UniformFieldAndDataStruct.cpp
@@ -48,13 +44,9 @@ add_executable(OpenGLearn
         openGLearn/Main.cpp
         openGLearn/Mesh.cpp
         openGLearn/Mesh.h
-        openGLearn/Model.cpp
-        openGLearn/Model.h
         openGLearn/resource.h
         openGLearn/stb_image.cpp
         openGLearn/stb_image.h)
 
-#target_link_libraries(OpenGLearn
-#        glfw3.lib
-#        glfw3dll.lib
-#        assimp-vc140-mt.lib)
+target_link_libraries(openGLearn
+        assimp)
